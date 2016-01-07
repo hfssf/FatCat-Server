@@ -15,7 +15,6 @@
 #include "diskdbmanager.h"
 
 using namespace std;
-//static boost::mutex     mtx;
 
 DiskDBManager::DiskDBManager()
 {

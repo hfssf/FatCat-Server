@@ -23,8 +23,8 @@ PlayerLogin::~PlayerLogin()
 void PlayerLogin::ReturnRoleListSaveData(TCPConnection::Pointer conn)
 {
     conn->LockLoginStatus();
-    conn->ChangePlayerLoginStatus(PlayerNotLoginUser);
-    conn->UnlockLoginStatus();
+
+
     Server *srv = Server::GetInstance();
     SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
     hf_int32 roleid = ((*smap)[conn].m_roleid);
@@ -46,8 +46,11 @@ void PlayerLogin::ReturnRoleListSaveData(TCPConnection::Pointer conn)
     FriendOffline(conn);          //发送下线通知给好友
     SaveRoleNotPickGoods(conn);   //保存玩家未捡取的掉落物品
     SendOffLineToViewRole(conn);  //将下线消息通知给可视范围内的玩家
-    SessionMgr::Instance()->NickSockErase((*smap)[conn].m_RoleBaseInfo.Nick);
-    SessionMgr::Instance()->RoleSockErase(roleid);
+//    SessionMgr::Instance()->NickSockErase((*smap)[conn].m_RoleBaseInfo.Nick);
+    SessionMgr::Instance()->RoleNickErase(roleid, conn);
+
+    conn->ChangePlayerLoginStatus(PlayerNotLoginUser);
+    conn->UnlockLoginStatus();
 }
 
 //保存玩家角色退出数据，并发送下线通知给其他玩家
@@ -65,14 +68,12 @@ void PlayerLogin::SavePlayerOfflineData(TCPConnection::Pointer conn)
     }
     else if(t_loginState == PlayerLoginUser)
     {
-        SessionMgr::Instance()->NameSockErase(&(*smap)[conn].m_usrid[0]);
-        SessionMgr::Instance()->SessionsErase(conn);
+        SessionMgr::Instance()->SessionsNameErase(conn);
         Logger::GetLogger()->Debug("not login role exit");
         conn->UnlockLoginStatus();
         return;
     }
-    conn->ChangePlayerLoginStatus(PlayerNotLoginUser);
-    conn->UnlockLoginStatus();
+
     hf_int32 roleid = ((*smap)[conn].m_roleid);
 
     //将玩家当前数据写进数据库,(位置，任务进度等)
@@ -94,10 +95,11 @@ void PlayerLogin::SavePlayerOfflineData(TCPConnection::Pointer conn)
     SaveRoleNotPickGoods(conn);   //保存玩家未捡取的掉落物品
     SendOffLineToViewRole(conn);  //将下线消息通知给可视范围内的玩家
 
-    SessionMgr::Instance()->NameSockErase(&(*smap)[conn].m_usrid[0]);
-    SessionMgr::Instance()->NickSockErase((*smap)[conn].m_RoleBaseInfo.Nick);
-    SessionMgr::Instance()->RoleSockErase(roleid);
-    SessionMgr::Instance()->SessionsErase(conn);
+    SessionMgr::Instance()->RoleNickErase(roleid, conn);
+    SessionMgr::Instance()->SessionsNameErase(conn);
+
+    conn->ChangePlayerLoginStatus(PlayerNotLoginUser);
+    conn->UnlockLoginStatus();
 
 
     ///////////////////////////////////////////////////
@@ -137,7 +139,7 @@ void PlayerLogin::SavePlayerOfflineData(TCPConnection::Pointer conn)
 //    SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
 
 //    SessionMgr::umap_nickSock nameSock = SessionMgr::Instance()->GetNameSock();
-//    SessionMgr::_umap_nickSock::iterator t_nameSock = nameSock->find(&(*smap)[conn].m_usrid[0]);
+//    SessionMgr::_umap_nickSock::iterator t_nameSock = nameSock->find((*smap)[conn].m_usrid);
 //    if(t_nameSock != nameSock->end())
 //    {
 //        nameSock->erase(t_nameSock); //删除m_nameSock
@@ -212,7 +214,7 @@ void PlayerLogin::RegisterRole(TCPConnection::Pointer conn, STR_PlayerRegisterRo
     hf_char nickbuff[33] = { 0 };
     memcpy(nickbuff, reg->Nick, sizeof(reg->Nick));
     SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
-    hf_char *pname =  & ( (*smap)[conn].m_usrid[0]);
+    hf_char *pname = (*smap)[conn].m_usrid;
     sbd<< "insert into t_PlayerRoleList(username,nick,sex,figure,figurecolor,face,eye,hair,haircolor,modeid,skirtid) values('" <<pname<<"','"<< nickbuff << "'," << reg->Sex<<","<<reg->Figure<<","<<reg->FigureColor<<","<< reg->Face << "," << reg->Eye << "," << reg->Hair <<"," << reg->HairColor << "," << reg->ModeID << "," << reg->SkirtID <<");";
 
     Logger::GetLogger()->Debug(sbd.str());
@@ -291,7 +293,7 @@ void PlayerLogin::DeleteRole(TCPConnection::Pointer conn, hf_uint32 roleid)
 {
     SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
     StringBuilder       sbd;
-    hf_char* NameBuff = &(*smap)[conn].m_usrid[0];
+    hf_char* NameBuff = (*smap)[conn].m_usrid;
     time_t timep;
     time(&timep);
     //删除该用户的该角色
@@ -350,14 +352,17 @@ void PlayerLogin::LoginUserId(TCPConnection::Pointer conn, STR_PlayerLoginUserId
 
             t_PackResult.result = RESULT_SUCCESS;
             conn->Write_all(&t_PackResult, sizeof(STR_PackResult));
+
+
+
+            Logger::GetLogger()->Debug("%s:%s user login success:%s",typeid(this).name(), __FUNCTION__,reg->userName);
+            SessionMgr::Instance()->SessionsNameAdd(conn, reg->userName);
+            //发送角色列表
+            SendRoleList(conn, reg->userName);
+
             conn->LockLoginStatus();
             conn->ChangePlayerLoginStatus(PlayerLoginUser);
             conn->UnlockLoginStatus();
-            Logger::GetLogger()->Debug("%s:%s user login success:%s",typeid(this).name(), __FUNCTION__,reg->userName);
-            SessionMgr::Instance()->SessionsAdd(conn, reg->userName);
-            SessionMgr::Instance()->NameSockAdd(reg->userName, conn);
-            //发送角色列表
-            SendRoleList(conn, reg->userName);
         }
         else //密码不正确
         {
@@ -383,7 +388,7 @@ void PlayerLogin::LoginRole(TCPConnection::Pointer conn, hf_uint32 roleid)
 
     SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
 
-    hf_char *pname =  & ( (*smap)[conn].m_usrid[0]);
+    hf_char *pname = (*smap)[conn].m_usrid;
     StringBuilder sbd;
     sbd << "select * from t_playerrolelist where username='"
          <<pname<<"' and roleid=" << roleid << " and ifdelete = 0;";
@@ -400,16 +405,12 @@ void PlayerLogin::LoginRole(TCPConnection::Pointer conn, hf_uint32 roleid)
     {
         t_packResult.result = RESULT_SUCCESS;
         conn->Write_all(&t_packResult, sizeof(STR_PackResult));
-        conn->LockLoginStatus();
-        conn->ChangePlayerLoginStatus(PlayerLoginRole);
-        conn->UnlockLoginStatus();
+
         Logger::GetLogger()->Debug("Login Role Success");
 
         (*smap)[conn].m_roleid = roleid;
 
-        SessionMgr::Instance()->RoleSockAdd(roleid, conn);
-        SessionMgr::Instance()->NickSockAdd(t_roleBaseInfo->Nick, conn);
-
+        SessionMgr::Instance()->RoleNickAdd(roleid, t_roleBaseInfo->Nick, conn);
 
         sbd.Clear();
         sbd << "select * from t_playerbodyequipment where roleid = " << roleid << ";";
@@ -469,12 +470,9 @@ void PlayerLogin::LoginRole(TCPConnection::Pointer conn, hf_uint32 roleid)
         Logger::GetLogger()->Debug("%u login data send success", roleid);
 
 
-        //test
-//        hf_double* timep = &(*(*smap)[conn].m_skillTime)[100];
-//        printf("%lf\n", *timep);
-//        *timep = 1000.56;
-//        timep = &(*(*smap)[conn].m_skillTime)[100];
-//        printf("%lf\n", *timep);
+        conn->LockLoginStatus();
+        conn->ChangePlayerLoginStatus(PlayerLoginRole);
+        conn->UnlockLoginStatus();
     }
 }
 
@@ -488,17 +486,15 @@ void PlayerLogin::PlayerOffline(TCPConnection::Pointer conn, STR_PackPlayerOffli
 
     if(reg->type == 1)  //断开链接
     {
-        SessionMgr::Instance()->NameSockErase(&(*smap)[conn].m_usrid[0]);
-        SessionMgr::Instance()->SessionsErase(conn);
+        SessionMgr::Instance()->SessionsNameErase(conn);
     }
     else if(reg->type  == 2) //返回角色列表
     {
         Session s;
-        (*smap)[conn].m_usrid.swap(s.m_usrid);
+        memcpy(s.m_usrid, (*smap)[conn].m_usrid, sizeof(s.m_usrid));
 
         (*smap)[conn] = s;
-        hf_char* userID = (hf_char*)&(*smap)[conn].m_usrid;
-        SendRoleList(conn, userID);
+        SendRoleList(conn, s.m_usrid);
     }
     srv->free(reg);
 }
@@ -527,7 +523,7 @@ void PlayerLogin::SendRoleList(TCPConnection::Pointer conn, hf_char* userID)
         t_packHead.Flag = FLAG_PlayerRoleList;
         for(hf_int32 i = 0; i < roleCount; i++)
         {
-            memcpy(buff + sizeof(STR_PackHead) +  i*sizeof(STR_RoleBasicInfo),&(t_Rolelist.m_Role[i]),sizeof(STR_RoleBasicInfo));
+            memcpy(buff + sizeof(STR_PackHead) +  j*sizeof(STR_RoleBasicInfo),&(t_Rolelist.m_Role[i]),sizeof(STR_RoleBasicInfo));
             j++;
             if(j == (CHUNK_SIZE - sizeof(STR_PackHead))/sizeof(STR_RoleBasicInfo))
             {
@@ -1249,6 +1245,7 @@ void PlayerLogin::SendViewRole(TCPConnection::Pointer conn)
     umap_roleSock viewRole = (*smap)[conn].m_viewRole;
     STR_PackPlayerPosition* pos = &(*smap)[conn].m_position;
     hf_uint32 roleid = (*smap)[conn].m_roleid;
+    hf_uint32 otherRoleid = 0;
     Server* srv = Server::GetInstance();
     hf_char* comebuff = (hf_char*)srv->malloc();
     hf_char* leavebuff = (hf_char*)srv->malloc();
@@ -1272,9 +1269,12 @@ void PlayerLogin::SendViewRole(TCPConnection::Pointer conn)
 
     STR_PackRoleLeave t_leaveHead;
     t_leaveHead.Role = roleid;
+//    Logger::GetLogger()->Debug("smap->size() = %d",smap->size());
     for(SessionMgr::SessionMap::iterator it = smap->begin(); it != smap->end(); it++)
     {
-        if ( it->first == conn)
+        otherRoleid = it->second.m_roleid;
+//        Logger::GetLogger()->Debug("roleid = %u", otherRoleid);
+        if (it->first == conn)
             continue;
         if(caculateDistanceWithRole(pos, &(it->second.m_position)) == View)
         {
@@ -1296,8 +1296,12 @@ void PlayerLogin::SendViewRole(TCPConnection::Pointer conn)
             pushCount++;
 
 
-            (*viewRole)[it->second.m_roleid] = it->first;
-            (*(it->second.m_viewRole))[roleid] = conn;
+            cout << otherRoleid << " jinrushiyefanwei" << roleid<< endl;
+            (*smap)[conn].ViewRoleAdd(otherRoleid, it->first);
+            it->second.ViewRoleAdd(roleid, conn);
+
+//            (*viewRole)[it->second.m_roleid] = it->first;
+//            (*(it->second.m_viewRole))[roleid] = conn;
             it->first->Write_all(&t_roleCome, sizeof(STR_PackRoleCome));
 
             if(pushCount == (CHUNK_SIZE - sizeof(STR_PackHead))/len)
@@ -1316,14 +1320,16 @@ void PlayerLogin::SendViewRole(TCPConnection::Pointer conn)
             _umap_roleSock::iterator iter = viewRole->find(it->second.m_roleid);
             if(iter != viewRole->end())  //离开范围
             {
-                cout << it->second.m_roleid << "likaishiyefanwei" << endl;
+                cout << otherRoleid << " likaishiyefanwei "<< roleid << endl;
                 memcpy(leavebuff + sizeof(STR_PackHead) + popCount*4, &(it->second.m_roleid), 4);
                 popCount++;
 
                 it->first->Write_all(&t_leaveHead, sizeof(STR_PackRoleLeave));
 
-                (*smap)[iter->second].m_viewRole->erase(roleid);
-                (*smap)[conn].m_viewRole->erase((*smap)[iter->second].m_roleid);
+                (*smap)[conn].ViewRoleDelete(otherRoleid);
+                it->second.ViewRoleDelete(roleid);
+//                it->second.m_viewRole->erase(roleid);
+//                (*smap)[conn].m_viewRole->erase((*smap)[iter->second].m_roleid);
             }
         }
     }

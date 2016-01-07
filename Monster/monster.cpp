@@ -485,7 +485,7 @@ void Monster::Monsteractivity()
 
                 if(monsterAttackInfo->Crit_Rate*100 >= rand()%100)//暴击
                 {
-                    t_damageData.Flag = CRIT;
+                    t_damageData.Flag = CRIT_HIT;
                     t_damageData.Damage *= 1.5;
                 }
                 else //未暴击

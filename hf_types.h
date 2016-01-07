@@ -14,10 +14,10 @@
 #define  CHUNK_SIZE            1024        //内存池块大小
 #define  CHUNK_COUNT           4096        //内存池块数
 //#define     SRV_PORT_DEFAULT      7000         //监听端口
-#define  CORE_NUM              4           //CPU核心数
+#define  CORE_NUM              2           //CPU核心数
 #define  PI                    3.141592654
-#define  ThreadCount           1000        //线程池，线程数量
-#define  PackageCount          10*1024    //队列中可以存放未处理包的数量
+#define  ThreadCount           CORE_NUM*8  //线程池，线程数量
+#define  PackageCount          10*1024     //队列中可以存放未处理包的数量
 
 #define  View                  1           //能看到，用来表示玩家之间和玩家与怪物之间
 #define  NotView               2           //看不到
@@ -36,7 +36,7 @@
 
 #define  MonsterMoveDistance   5           //怪物移动一次的距离
 #define  PlayerMoveDistance    5           //玩家移动一次的距离  单位分米
-#define  RefreshDistance       20          //玩家刷新数据的距离
+#define  RefreshDistance       100          //玩家刷新数据的距离
 
 #define  PursuitNearlyDistance 10           //怪物追击玩家，距离较近一次移动的距离
 
@@ -104,7 +104,7 @@
 #define  NOT_HIT                4      //未命中
 #define  Dodge                  5      //闪避
 #define  RESIST                 6      //抵挡
-#define  CRIT                   7      //暴击
+#define  CRIT_HIT               7      //暴击
 
 #define  BackOut                8      //返回  怪物返回中
 

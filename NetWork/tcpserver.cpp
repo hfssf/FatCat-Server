@@ -60,6 +60,10 @@ void TCPServer::CallBack_Accept(TCPConnection::Pointer conn, const boost::system
         conn->Start();
 //        Server::GetInstance()->RunTask(boost::bind(&TCPConnection::Start,conn));
     }
+    else
+    {
+        Logger::GetLogger()->Error("error:%d",ec.value());
+    }
     StartListen();
 }
 

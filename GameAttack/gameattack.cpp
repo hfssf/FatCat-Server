@@ -183,7 +183,7 @@ void GameAttack::CommonAttackRole(TCPConnection::Pointer conn, STR_PackUserAttac
 
     if(t_AttacketInfo->Crit_Rate*100 > rand()%100)//暴击
     {
-        t_damageData.Flag = CRIT;
+        t_damageData.Flag = CRIT_HIT;
         t_damageData.Damage *= 1.5;
     }
     else //未暴击
@@ -303,7 +303,7 @@ void GameAttack::CommonAttackMonster(TCPConnection::Pointer conn, STR_PackUserAt
 
     if(t_AttacketInfo->Crit_Rate*100 >= rand()%100)//暴击
     {
-        t_damageData.Flag = CRIT;
+        t_damageData.Flag = CRIT_HIT;
         t_damageData.Damage *= 1.5;
     }
     else //未暴击
@@ -674,7 +674,7 @@ void GameAttack::RoleSkillAttack()
 
                      if(t_AttacketInfo->Crit_Rate*100 >= rand()%100)//暴击
                      {
-                         t_damageData.Flag = CRIT;
+                         t_damageData.Flag = CRIT_HIT;
                          t_damageData.Damage *= 1.5;
                      }
                      else //未暴击
@@ -1192,7 +1192,7 @@ void GameAttack::AimMonster(TCPConnection::Pointer conn, STR_PackSkillInfo* skil
 
             if(t_AttacketInfo->Crit_Rate*100 >= rand()%100)//暴击
             {
-                t_damageData.Flag = CRIT;
+                t_damageData.Flag = CRIT_HIT;
                 t_damageData.Damage *= 1.5;
             }
             else //未暴击
@@ -1297,7 +1297,7 @@ void GameAttack::AimRole(TCPConnection::Pointer conn, STR_PackSkillInfo* skillIn
 
         if(t_AttacketInfo->Crit_Rate*100 >= rand()%100)//暴击
         {
-            t_damageData.Flag = CRIT;
+            t_damageData.Flag = CRIT_HIT;
             t_damageData.Damage *= 1.5;
         }
         else //未暴击

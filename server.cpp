@@ -110,6 +110,11 @@ void Server::InitDB()
    OperationPostgres* t_opePost = srv->GetOperationPostgres();
 
    srv->RunTask(boost::bind(&Server::PopPackage, srv));
+   srv->RunTask(boost::bind(&Server::PopPackage, srv));
+   srv->RunTask(boost::bind(&Server::PopPackage, srv));
+   srv->RunTask(boost::bind(&Server::PopPackage, srv));
+   srv->RunTask(boost::bind(&Server::PopPackage, srv));
+
    srv->RunTask(boost::bind(&Monster::Monsteractivity, t_monster));
    //技能伤害线程
    srv->RunTask(boost::bind(&GameAttack::RoleSkillAttack, t_attack));

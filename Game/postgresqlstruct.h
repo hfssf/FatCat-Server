@@ -3,7 +3,6 @@
 
 #include <string.h>
 #include <vector>
-//#include <boost/thread/mutex.hpp>
 //#include <boost/atomic.hpp>
 
 #include "./../hf_types.h"

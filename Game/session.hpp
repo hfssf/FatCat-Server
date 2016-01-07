@@ -94,11 +94,10 @@ public:
         ,m_taskGoods( new _umap_taskGoods)
     {
         m_publicCoolTime = 0;
+        memset(m_usrid, 0, sizeof(m_usrid));
         memset(m_goodsPosition, 0, BAGCAPACITY);
         m_skillUseTime = 0;
         m_roleid = 0;
-        m_usrid.assign(0);
-//        m_nick.assign(0);
     }
 
     ~Session()
@@ -110,7 +109,7 @@ public:
     {
         printf("nihao\n\n");
 
-        m_usrid = sess.m_usrid;
+        memcpy(m_usrid, sess.m_usrid, sizeof(m_usrid));
         m_roleid = sess.m_roleid;
         m_publicCoolTime = sess.m_publicCoolTime;
         m_skillUseTime = sess.m_skillUseTime;
@@ -169,9 +168,19 @@ public:
         }
     }
 
-    typedef boost::array<char,40>    Buff;
-    Buff                    m_usrid;             //用户名
-//    Buff                    m_nick;              //昵称
+    void ViewRoleAdd(hf_uint32 roleid, TCPConnection::Pointer conn)
+    {
+        (*m_viewRole)[roleid] = conn;
+    }
+
+    void ViewRoleDelete(hf_uint32 roleid)
+    {
+        m_viewRole->erase(roleid);
+    }
+
+//    typedef boost::array<char,40>    Buff;
+//    Buff                    m_usrid;
+    hf_char                 m_usrid[40];         //用户名
     hf_uint32               m_roleid;            //角色ID
     hf_double               m_publicCoolTime;    //公共冷却时间
     hf_double               m_skillUseTime;      //再次使用技能的时间
@@ -217,21 +226,15 @@ public:
 
 
 
-     void    SaveSession(TCPConnection::Pointer sock,char *name)
-     {
-//         Session s;
-//         sprintf(&(s.m_usrid[0]),name);
-//         s.m_roleid = 0;
-
-//        SessionMgr::SessionMap *ssmap = m_sessions.get();
-
-        m_sessionsMtx.lock();
-        memcpy(&(*m_sessions)[sock].m_usrid[0], name, 32);
-        (*m_sessions)[sock].m_roleid = 0;
-        m_sessionsMtx.unlock();
-//        SessionsAdd(sock, s);
-//         (*ssmap)[sock] = s;
-     }
+//     void    SaveSession(TCPConnection::Pointer sock,char *name)
+//     {
+//        m_sessionsMtx.lock();
+//        memcpy((*m_sessions)[sock].m_usrid, name, 32);
+//        (*m_sessions)[sock].m_roleid = 0;
+//        m_sessionsMtx.unlock();
+////        SessionsAdd(sock, s);
+////         (*ssmap)[sock] = s;
+//     }
 
      void SaveSession(TCPConnection::Pointer sock, STR_PackPlayerPosition* playerPosition)
      {
@@ -263,11 +266,6 @@ public:
         Logger::GetLogger()->Info("Remove Session");
         m_sessions->erase(conn);
      }
-
-    char *GetUserBySock(TCPConnection::Pointer sk )
-    {
-        return    &   (*(m_sessions))[sk].m_usrid[0];
-    }
 
     ~SessionMgr()               {}
 
@@ -315,69 +313,46 @@ public:
         return m_recoveryHPMagic;
     }
 
-    void SessionsAdd(TCPConnection::Pointer conn, hf_char* name)
+    void SessionsNameAdd(TCPConnection::Pointer conn, hf_char* name)
     {
-        m_sessionsMtx.lock();
-        memcpy(&(*m_sessions)[conn].m_usrid[0], name, 32);
+        m_sessNameMtx.lock();
+        memcpy((*m_sessions)[conn].m_usrid, name, 32);
         (*m_sessions)[conn].m_roleid = 0;
         Logger::GetLogger()->Debug("m_sessions add end:%d",m_sessions->size());
-        m_sessionsMtx.unlock();
-    }
-
-    void SessionsErase(TCPConnection::Pointer conn)
-    {
-        m_sessionsMtx.lock();
-        m_sessions->erase(conn);
-        Logger::GetLogger()->Debug("m_sessions delete end:%d",m_sessions->size());
-        m_sessionsMtx.unlock();
-    }
-
-    void RoleSockAdd(hf_uint32 roleid, TCPConnection::Pointer conn)
-    {
-        m_roleMtx.lock();
-        (*m_roleSock)[roleid] = conn;
-        Logger::GetLogger()->Debug("m_roleSock add end:%d",m_roleSock->size());
-        m_roleMtx.unlock();
-    }
-
-    void RoleSockErase(hf_uint32 roleid)
-    {
-        m_roleMtx.lock();       
-        m_roleSock->erase(roleid);
-        Logger::GetLogger()->Debug("m_roleSock delete end:%d",m_roleSock->size());
-        m_roleMtx.unlock();
-    }
-
-    void NickSockAdd(hf_char* nick, TCPConnection::Pointer conn)
-    {
-        m_nickMtx.lock();
-        (*m_nickSock)[nick] = conn;
-        Logger::GetLogger()->Debug("m_nickSock add end:%d",m_nickSock->size());
-        m_nickMtx.unlock();
-    }
-
-    void NickSockErase(hf_char* nick)
-    {
-        m_nickMtx.lock();
-        m_nickSock->erase(nick);
-        Logger::GetLogger()->Debug("m_nickSock delete end:%d",m_nickSock->size());
-        m_nickMtx.unlock();
-    }
-
-    void NameSockAdd(hf_char* name, TCPConnection::Pointer conn)
-    {
-        m_nameMtx.lock();
         (*m_nameSock)[name] = conn;
         Logger::GetLogger()->Debug("m_nameSock add end:%d", m_nameSock->size());
-        m_nameMtx.unlock();
+        m_sessNameMtx.unlock();
     }
 
-    void NameSockErase(hf_char* name)
+    void SessionsNameErase(TCPConnection::Pointer conn)
     {
-        m_nameMtx.lock();
-        m_nameSock->erase(name);
+        m_sessNameMtx.lock();
+        m_nameSock->erase((*m_sessions)[conn].m_usrid);
         Logger::GetLogger()->Debug("m_nameSock delete end:%d", m_nameSock->size());
-        m_nameMtx.unlock();
+
+        m_sessions->erase(conn);
+        Logger::GetLogger()->Debug("m_sessions delete end:%d",m_sessions->size());
+        m_sessNameMtx.unlock();
+    }
+
+    void RoleNickAdd(hf_uint32 roleid, hf_char* nick, TCPConnection::Pointer conn)
+    {
+        m_roleNickMtx.lock();
+        (*m_roleSock)[roleid] = conn;
+        Logger::GetLogger()->Debug("m_roleSock add end:%d",m_roleSock->size());
+        (*m_nickSock)[nick] = conn;
+        Logger::GetLogger()->Debug("m_nickSock add end:%d",m_nickSock->size());
+        m_roleNickMtx.unlock();
+    }
+
+    void RoleNickErase(hf_uint32 roleid, TCPConnection::Pointer conn)
+    {
+        m_roleNickMtx.lock();
+        m_roleSock->erase(roleid);
+        Logger::GetLogger()->Debug("m_roleSock delete end:%d",m_roleSock->size());
+        m_nickSock->erase((*m_sessions)[conn].m_RoleBaseInfo.Nick);
+        Logger::GetLogger()->Debug("m_nickSock delete end:%d",m_nickSock->size());
+        m_roleNickMtx.unlock();
     }
 
     void RecoveryHPAdd(TCPConnection::Pointer conn, STR_RecoveryHP hp)
@@ -427,9 +402,9 @@ private:
 
     SessionMgr():
       m_sessions(new SessionMap()),
-      m_roleSock(new _umap_roleSock),
-      m_nickSock(new _umap_nickSock),
       m_nameSock(new _umap_nickSock),
+      m_roleSock(new _umap_roleSock),
+      m_nickSock(new _umap_nickSock),   
       m_recoveryHP(new _umap_recoveryHP),
       m_recoveryMagic(new _umap_recoveryMagic),
       m_recoveryHPMagic(new _umap_recoveryHPMagic)
@@ -438,17 +413,19 @@ private:
     }
 
     SessionPointer              m_sessions;
+    umap_nickSock               m_nameSock;
+
     umap_roleSock               m_roleSock;
     umap_nickSock               m_nickSock;
-    umap_nickSock               m_nameSock;
+
     umap_recoveryHP             m_recoveryHP;      //使用延时恢复血量的消耗品
     umap_recoveryMagic          m_recoveryMagic;   //使用延时恢复魔法的消耗品
     umap_recoveryHPMagic        m_recoveryHPMagic; //使用延时恢复血量魔法的消耗品
 
-    boost::mutex                m_sessionsMtx;
-    boost::mutex                m_roleMtx;
-    boost::mutex                m_nickMtx;
-    boost::mutex                m_nameMtx;
+    boost::mutex                m_sessNameMtx;
+    boost::mutex                m_roleNickMtx;
+//    boost::mutex                m_nickMtx;
+//    boost::mutex                m_nameMtx;
     boost::mutex                m_ReHPMtx;
     boost::mutex                m_ReMagicMtx;
     boost::mutex                m_ReHPMagicMtx;
