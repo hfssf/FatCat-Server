@@ -1,4 +1,4 @@
-#include "gameinterchange.h"
+﻿#include "gameinterchange.h"
 #include "./../memManage/diskdbmanager.h"
 #include "./../utils/stringbuilder.hpp"
 #include "./../Game/log.h"
@@ -48,7 +48,7 @@ void GameInterchange::operRequest(TCPConnection::Pointer conn, operationRequest*
     }
 
     umap_roleSock rsock =  SessionMgr::Instance()->GetRoleSock();
-    auto iter = rsock->find(operReq->RoleID);
+    _umap_roleSock::iterator iter = rsock->find(operReq->RoleID);
     if(iter == rsock->end())           //对方不在线 由服务器发拒绝的包返回
     {
         operationRequestResult resp;
@@ -88,7 +88,7 @@ void GameInterchange::operResponse(TCPConnection::Pointer conn,  operationReques
     Server* srv = Server::GetInstance();
     SessionMgr::SessionPointer sp = SessionMgr::Instance()->GetSession();
     umap_roleSock rsock =  (SessionMgr::Instance()->GetRoleSock());
-    auto iter = rsock->find(operReq->RoleID);
+    _umap_roleSock::iterator iter = rsock->find(operReq->RoleID);
     if(iter == rsock->end())                    //对方掉线 由服务器发取消交易的包返回
     {
         if(operReq->operResult == Result_Accept)
@@ -130,13 +130,13 @@ void GameInterchange::operMoneyChanges(TCPConnection::Pointer conn, interchangeM
     boost::shared_ptr<Interchange> interchange = (*sp)[conn].m_interchage;
     TCPConnection::Pointer partnerConn = interchange->partnerConn;
 
-    auto iter = sp->find(partnerConn);
+    SessionMgr::SessionMap::iterator iter = sp->find(partnerConn);
     if(iter == sp->end())                        //对方离线 则发取消交易的包返回
     {
         interchangeOperPro resp;
         resp.operType = Operation_CancelChange;
         conn->Write_all((char*)&resp, sizeof(interchangeOperPro));
-        for(auto iter = interchange->changes.begin(); iter != interchange->changes.end(); ++iter)    //背包位置信息恢复原来标志
+        for(std::vector<STR_Goods>::iterator iter = interchange->changes.begin(); iter != interchange->changes.end(); ++iter)    //背包位置信息恢复原来标志
         {
             (*sp)[conn].m_goodsPosition[iter->Position] = POS_NONEMPTY;
         }
@@ -215,7 +215,7 @@ void GameInterchange::operChanges(TCPConnection::Pointer conn, interchangeOperGo
     boost::shared_ptr<Interchange> interchange = (*sp)[conn].m_interchage;
     if(oper->operType == Goods_Add)                        //增加物品的操作
     {
-        auto iter = interchange->changes.begin();
+        std::vector<STR_Goods>::iterator iter = interchange->changes.begin();
         for( ;iter != interchange->changes.end(); ++iter)
         {
             if(iter->Position == oper->position)
@@ -239,7 +239,7 @@ void GameInterchange::operChanges(TCPConnection::Pointer conn, interchangeOperGo
     else  if(oper->operType == Goods_Remove)                                                       //从交易篮中删除物品
     {
        int haveValue = 0;
-       auto iter = interchange->changes.begin();
+       std::vector<STR_Goods>::iterator iter = interchange->changes.begin();
        for(;iter != interchange->changes.end();++iter)
        {
            if(iter->Count == oper->goodsCount&&iter->Position ==  oper->position&&iter->GoodsID == oper->goodsId)
@@ -257,13 +257,13 @@ void GameInterchange::operChanges(TCPConnection::Pointer conn, interchangeOperGo
     }
 
     TCPConnection::Pointer partnerConn = interchange->partnerConn;
-    auto iter = sp->find(partnerConn);
+    SessionMgr::SessionMap::iterator iter = sp->find(partnerConn);
     if(iter == sp->end())                        //对方离线 则由服务器发取消交易的包返回
     {
         interchangeOperPro resp;
         resp.operType = Operation_CancelChange;
         conn->Write_all((char*)&resp, sizeof(interchangeOperPro));
-        for(auto iter = interchange->changes.begin(); iter != interchange->changes.end(); ++iter)    //背包位置信息恢复原来标志
+        for(std::vector<STR_Goods>::iterator iter = interchange->changes.begin(); iter != interchange->changes.end(); ++iter)    //背包位置信息恢复原来标志
         {
             (*sp)[conn].m_goodsPosition[iter->Position] = POS_NONEMPTY;
         }
@@ -284,16 +284,15 @@ void GameInterchange::operProLock(TCPConnection::Pointer conn,  interchangeOperP
     boost::shared_ptr<Interchange> interchange = (*sp)[conn].m_interchage;
     TCPConnection::Pointer partnerConn = interchange->partnerConn;
 
-
     interchange->lock();                  //进入锁定状态
 
-    auto iter = sp->find(partnerConn);
+    SessionMgr::SessionMap::iterator iter = sp->find(partnerConn);
     if(iter == sp->end())                        //对方离线 则由服务器发取消交易的包返回
     {
         interchangeOperPro resp;
         resp.operType = Operation_CancelChange;
         conn->Write_all((char*)&resp, sizeof(interchangeOperPro));
-        for(auto iterIn = interchange->changes.begin(); iterIn != interchange->changes.end();++iterIn)
+        for(std::vector<STR_Goods>::iterator iterIn = interchange->changes.begin(); iterIn != interchange->changes.end();++iterIn)
         {
               (*sp)[conn].m_goodsPosition[iterIn->Position] = POS_NONEMPTY;       //恢复物品原来标志
         }
@@ -315,14 +314,14 @@ void GameInterchange::operProUnlock(TCPConnection::Pointer conn, interchangeOper
     boost::shared_ptr<Interchange> interchange = (*sp)[conn].m_interchage;
     TCPConnection::Pointer partnerConn = interchange->partnerConn;
 
-    auto iter = sp->find(partnerConn);
+    SessionMgr::SessionMap::iterator iter = sp->find(partnerConn);
     if(iter == sp->end())    //对方离线 则由服务器发取消交易的包返回
     {
         interchangeOperPro resp;
         resp.operType = Operation_CancelChange;
         conn->Write_all((char*)&resp, sizeof(interchangeOperPro));
 
-        for(auto iterIn = interchange->changes.begin(); iterIn != interchange->changes.end();++iterIn)
+        for(std::vector<STR_Goods>::iterator iterIn = interchange->changes.begin(); iterIn != interchange->changes.end();++iterIn)
         {
               (*sp)[conn].m_goodsPosition[iterIn->Position] = POS_NONEMPTY;       //恢复物品原来标志
         }
@@ -359,14 +358,14 @@ void GameInterchange::operProCheckChange(TCPConnection::Pointer conn,  interchan
     boost::shared_ptr<Interchange> interchange = (*sp)[conn].m_interchage;
     TCPConnection::Pointer partnerConn =  interchange->partnerConn;
 
-    auto iter = sp->find(partnerConn);
+    SessionMgr::SessionMap::iterator iter = sp->find(partnerConn);
     if(iter == sp->end())    //对方离线 则由服务器发取消交易的包返回
     {
         interchangeOperPro resp;
         resp.operType = Operation_CancelChange;
         conn->Write_all((char*)&resp, sizeof(interchangeOperPro));
 
-        for(auto iterIn = interchange->changes.begin(); iterIn != interchange->changes.end();++iterIn)
+        for(std::vector<STR_Goods>::iterator iterIn = interchange->changes.begin(); iterIn != interchange->changes.end();++iterIn)
         {
               (*sp)[conn].m_goodsPosition[iterIn->Position] = POS_NONEMPTY;       //恢复物品原来标志
         }
@@ -423,11 +422,11 @@ void GameInterchange::operProCheckChange(TCPConnection::Pointer conn,  interchan
         conn->Write_all((char*)&resp, sizeof(interchangeOperPro));
         partnerConn->Write_all((char*)&resp, sizeof(interchangeOperPro));
 
-        for(auto iter = interchange->changes.begin(); iter != interchange->changes.end();++iter)
+        for(std::vector<STR_Goods>::iterator iter = interchange->changes.begin(); iter != interchange->changes.end();++iter)
         {
               (*sp)[conn].m_goodsPosition[iter->Position] = POS_NONEMPTY;       //恢复物品原来标志
         }
-        for(auto iter = pInterchange->changes.begin(); iter != pInterchange->changes.end();++iter)
+        for(std::vector<STR_Goods>::iterator iter = pInterchange->changes.begin(); iter != pInterchange->changes.end();++iter)
         {
               (*sp)[partnerConn].m_goodsPosition[iter->Position] = POS_NONEMPTY;       //恢复物品原来标志
         }
@@ -445,11 +444,11 @@ void GameInterchange::operProCheckChange(TCPConnection::Pointer conn,  interchan
     partnerConn->Write_all((char*)&resp, sizeof(interchangeOperPro));
 
     GameTask* t_task = srv->GetGameTask();
-    for(auto iter = interchange->changes.begin(); iter != interchange->changes.end();++iter)
+    for(std::vector<STR_Goods>::iterator iter = interchange->changes.begin(); iter != interchange->changes.end();++iter)
     {
           t_task->UpdateCollectGoodsTaskProcess(conn,iter->TypeID);
     }
-    for(auto iter = pInterchange->changes.begin(); iter != pInterchange->changes.end();++iter)
+    for(std::vector<STR_Goods>::iterator iter = pInterchange->changes.begin(); iter != pInterchange->changes.end();++iter)
     {
           t_task->UpdateCollectGoodsTaskProcess(conn,iter->TypeID);
     }
@@ -470,14 +469,14 @@ void GameInterchange::operDoChange(TCPConnection::Pointer conn)  //交换双方�
 
 
     //把本方要交易的物品从本方背包删除
-    for(auto iter = interchange->changes.begin(); iter != interchange->changes.end();++iter)
+    for(std::vector<STR_Goods>::iterator iter = interchange->changes.begin(); iter != interchange->changes.end();++iter)
     {
         _umap_roleGoods::iterator iterGoods = (*sp)[conn].m_playerGoods->find(iter->GoodsID);
         if(iterGoods == (*sp)[conn].m_playerGoods->end())
         {
             continue;
         }
-        for(auto iterIn = iterGoods->second.begin(); iterIn != iterGoods->second.end(); ++iterIn)
+        for(vector<STR_Goods>::iterator iterIn = iterGoods->second.begin(); iterIn != iterGoods->second.end(); ++iterIn)
         {
             if(iterIn->Position == iter->Position)
             {
@@ -506,14 +505,14 @@ void GameInterchange::operDoChange(TCPConnection::Pointer conn)  //交换双方�
     }
 
     //把对方要交易物品从对方背包中删除
-    for(auto iter = pInterchange->changes.begin(); iter != pInterchange->changes.end();++iter)
+    for(std::vector<STR_Goods>::iterator iter = pInterchange->changes.begin(); iter != pInterchange->changes.end();++iter)
     {
         _umap_roleGoods::iterator iterGoods = (*sp)[partnerConn].m_playerGoods->find(iter->GoodsID);
         if(iterGoods == (*sp)[partnerConn].m_playerGoods->end())
         {
             continue;
         }
-        for(auto iterIn = iterGoods->second.begin(); iterIn != iterGoods->second.end(); ++iterIn)
+        for(std::vector<STR_Goods>::iterator iterIn = iterGoods->second.begin(); iterIn != iterGoods->second.end(); ++iterIn)
         {
             if(iterIn->Position == iter->Position)
             {
@@ -543,7 +542,7 @@ void GameInterchange::operDoChange(TCPConnection::Pointer conn)  //交换双方�
     }
 
     //将本方要交易的物品添加到对方背包
-    for(auto iter = interchange->changes.begin(); iter != interchange->changes.end();++iter)
+    for(std::vector<STR_Goods>::iterator iter = interchange->changes.begin(); iter != interchange->changes.end();++iter)
     {
 
         vector<STR_Goods> vec;
@@ -592,7 +591,7 @@ void GameInterchange::operDoChange(TCPConnection::Pointer conn)  //交换双方�
     }
 
      //将对方要交易的物品添加到本方背包
-    for(auto iter = pInterchange->changes.begin(); iter != pInterchange->changes.end();++iter)
+    for(std::vector<STR_Goods>::iterator iter = pInterchange->changes.begin(); iter != pInterchange->changes.end();++iter)
     {
         vector<STR_Goods> vec;
         STR_Goods goods;
@@ -848,7 +847,7 @@ void GameInterchange::operProCancelChange(TCPConnection::Pointer conn,interchang
     boost::shared_ptr<Interchange> interchange = (*sp)[conn].m_interchage;
     TCPConnection::Pointer partnerConn = interchange->partnerConn;
 
-    auto iter = sp->find(partnerConn);
+    SessionMgr::SessionMap::iterator iter = sp->find(partnerConn);
 
     if(iter == sp->end())    //对方离线
     {
@@ -861,11 +860,11 @@ void GameInterchange::operProCancelChange(TCPConnection::Pointer conn,interchang
     boost::shared_ptr<Interchange> pInterchange = (*sp)[partnerConn].m_interchage;
     partnerConn->Write_all((char*)oper, sizeof(interchangeOperPro));   //转发取消交易的包
 
-    for(auto iter = interchange->changes.begin(); iter != interchange->changes.end(); ++iter)    //背包位置信息恢复原来标志
+    for(std::vector<STR_Goods>::iterator iter = interchange->changes.begin(); iter != interchange->changes.end(); ++iter)    //背包位置信息恢复原来标志
     {
         (*sp)[conn].m_goodsPosition[iter->Position] = POS_NONEMPTY;
     }
-    for(auto iter = pInterchange->changes.begin(); iter != pInterchange->changes.end(); ++iter)
+    for(std::vector<STR_Goods>::iterator iter = pInterchange->changes.begin(); iter != pInterchange->changes.end(); ++iter)
     {
         (*sp)[partnerConn].m_goodsPosition[iter->Position] = POS_NONEMPTY;
     }
@@ -882,7 +881,7 @@ void GameInterchange::operProCancelRequest(TCPConnection::Pointer conn,interchan
     boost::shared_ptr<Interchange> interchange = (*sp)[conn].m_interchage;
     TCPConnection::Pointer partnerConn = interchange->partnerConn;
 
-    auto iter = sp->find(partnerConn);
+    SessionMgr::SessionMap::iterator iter = sp->find(partnerConn);
 
     if(iter == sp->end())    //对方离线
     {

@@ -7,6 +7,7 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
+#include <boost/lockfree/queue.hpp>
 
 //#include "Game/session.hpp"
 #include "./../hf_types.h"
@@ -23,10 +24,22 @@ typedef struct _STR_Package
 
 using  boost::asio::ip::tcp;
 
+struct  _Buffer
+{
+    _Buffer()
+    {
+        sz = 0;
+    }
+
+    char buf[CHUNK_SIZE];
+    int sz;
+};
+
 class TCPConnection:public boost::enable_shared_from_this<TCPConnection>
 {
 public:
     typedef boost::shared_ptr<TCPConnection>    Pointer;
+    TCPConnection(boost::asio::io_service &io);
     ~TCPConnection();
     /**
      * @brief Create
@@ -89,11 +102,11 @@ public:
 
     boost::mutex          m_write_lock;
     boost::mutex          m_read_lock;
-
-
+    boost::timed_mutex    m_w_lock;
+protected:
+    void  _push( void *buff, int size);
+    void  _write();
 private:
-    TCPConnection(boost::asio::io_service &io);
-
     hf_uint16 m_dataPos;   //接收到或者未处理的数据在m_buf里的位置
     hf_char                 m_buf[TCP_BUFFER_SIZE];
     STR_Package             m_pack;
@@ -105,11 +118,16 @@ private:
     //发送缓冲区
     hf_char                 m_send_buf[TCP_BUFFER_SIZE];
     hf_uint8                m_LoginStatus;  //0表示未登录用户，1表示已经登录用户，未登录角色， 2表示已经登录角色
-    boost::mutex          m_LoginStatusMtx;
+    boost::mutex            m_LoginStatusMtx;
+    int                     m_write_len;
+
+    boost::asio::io_service::strand m_strand;
     //
     //设置读写锁，保证通过网络传输的包的完整性。
     //一旦发生异常，及时将锁释放，否则会造成死锁
     //
+    boost::lockfree::queue<_Buffer>     m_queue;
+    bool                                _isWriting;
 
 
 };

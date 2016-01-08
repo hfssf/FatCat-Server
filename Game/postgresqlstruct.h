@@ -625,19 +625,6 @@ typedef struct _STR_PackGoods
     STR_Goods    goods;
 }STR_PackGoods;
 
-//玩家装备属性数据包
-//typedef struct _STR_Equipment
-//{
-//    hf_uint32 EquID;              //物品ID
-//    hf_uint32 TypeID;             //类型ID
-//    hf_uint32 PhysicalAttack;     //物理攻击
-//    hf_uint32 PhysicalDefense;    //物理防御
-//    hf_uint32 MagicAttack;        //魔法攻击
-//    hf_uint32 MagicDefense;       //魔法防御
-//    hf_uint32 AddHp;              //附加血量
-//    hf_uint32 AddMagic;           //附加魔法值
-//    hf_uint8  Durability;         //耐久度
-//}STR_Equipment;
 
 //玩家装备信息
 typedef struct _STR_PlayerEqu
