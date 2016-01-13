@@ -412,6 +412,9 @@ void PlayerLogin::LoginRole(TCPConnection::Pointer conn, hf_uint32 roleid)
 
         SessionMgr::Instance()->RoleNickAdd(roleid, t_roleBaseInfo->Nick, conn);
 
+        Logger::GetLogger()->Debug("Send Position data.....");
+        UserPosition::Position_push(conn, roleid);
+
         sbd.Clear();
         sbd << "select * from t_playerbodyequipment where roleid = " << roleid << ";";
         Logger::GetLogger()->Debug(sbd.str());
@@ -449,8 +452,6 @@ void PlayerLogin::LoginRole(TCPConnection::Pointer conn, hf_uint32 roleid)
         }
 
 
-        Logger::GetLogger()->Debug("Send Position data.....");
-        UserPosition::Position_push(conn, roleid);
 
         SendRoleExperence(conn);            //发送角色经验
         SendFriendList(conn, roleid);       //发送好友列表
@@ -1296,7 +1297,7 @@ void PlayerLogin::SendViewRole(TCPConnection::Pointer conn)
             pushCount++;
 
 
-            cout << otherRoleid << " jinrushiyefanwei" << roleid<< endl;
+//            cout << otherRoleid << " jinrushiyefanwei" << roleid<< endl;
             (*smap)[conn].ViewRoleAdd(otherRoleid, it->first);
             it->second.ViewRoleAdd(roleid, conn);
 
@@ -1320,7 +1321,7 @@ void PlayerLogin::SendViewRole(TCPConnection::Pointer conn)
             _umap_roleSock::iterator iter = viewRole->find(it->second.m_roleid);
             if(iter != viewRole->end())  //离开范围
             {
-                cout << otherRoleid << " likaishiyefanwei "<< roleid << endl;
+//                cout << otherRoleid << " likaishiyefanwei "<< roleid << endl;
                 memcpy(leavebuff + sizeof(STR_PackHead) + popCount*4, &(it->second.m_roleid), 4);
                 popCount++;
 

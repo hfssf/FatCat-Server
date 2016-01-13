@@ -118,6 +118,7 @@ private:
     //发送缓冲区
     hf_char                 m_send_buf[TCP_BUFFER_SIZE];
     hf_uint8                m_LoginStatus;  //0表示未登录用户，1表示已经登录用户，未登录角色， 2表示已经登录角色
+//    boost::shared_mutex     m_LoginStatusMtx;
     boost::mutex            m_LoginStatusMtx;
     int                     m_write_len;
 

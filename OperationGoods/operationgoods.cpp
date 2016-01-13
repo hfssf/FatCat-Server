@@ -1012,91 +1012,89 @@ void OperationGoods::BuyOtherGoods(TCPConnection::Pointer conn, STR_BuyGoods* bu
     _umap_roleGoods::iterator goods_it = t_playerGoods->find(buyGoods->GoodsID);
     hf_uint32 roleid = (*smap)[conn].m_roleid;
 
+    hf_uint16 i = 0;
     OperationPostgres* t_post = Server::GetInstance()->GetOperationPostgres();
     if(goods_it == t_playerGoods->end())  //背包还没这种物品
     {
         vector<STR_Goods> t_vec;
-        for(hf_uint16 i = 0; i < size; i++)
+        while(buyGoods->Count > 0) //开辟新位置放下剩余的物品
         {
             t_goods.Position = OperationGoods::GetEmptyPos(conn);
-            if(buyGoods->Count < GOODSMAXCOUNT)
-            {
-                t_goods.Count = buyGoods->Count;
-            }
-            else
+            if(buyGoods->Count > GOODSMAXCOUNT)
             {
                 t_goods.Count = GOODSMAXCOUNT;
                 buyGoods->Count -= GOODSMAXCOUNT;
             }
+            else
+            {
+                t_goods.Count = buyGoods->Count;
+                buyGoods->Count = 0;
+            }
             t_vec.push_back(t_goods);
             memcpy(buff + sizeof(STR_PackHead) + i * sizeof(STR_Goods), &t_goods, sizeof(STR_Goods));
-
-            t_post->PushUpdateGoods(roleid, &t_goods, PostInsert);  //将新买的物品添加到list
-        }
-
-         Server::GetInstance()->GetGameTask()->UpdateCollectGoodsTaskProcess(conn, buyGoods->GoodsID);
-        (*t_playerGoods)[t_goods.GoodsID] = t_vec;
-        STR_PackHead t_packHead;
-        t_packHead.Len = sizeof(STR_Goods)*size;
-        t_packHead.Flag = FLAG_BagGoods;
-        memcpy(buff, &t_packHead, sizeof(STR_PackHead));
-        conn->Write_all(buff, sizeof(STR_PackHead) + t_packHead.Len);
-
-        money->Count -= buyCount * price;
-        t_post->PushUpdateMoney(roleid, money);
-
-        memset(buff, 0, CHUNK_SIZE);
-        t_packHead.Len = sizeof(STR_PlayerMoney);
-        t_packHead.Flag = FLAG_PlayerMoney;
-
-        memcpy(buff, &t_packHead, sizeof(STR_PackHead));
-        memcpy(buff + sizeof(STR_PackHead), money, sizeof(STR_Goods));
-        conn->Write_all(buff, sizeof(STR_PackHead) + t_packHead.Len);
-        Server::GetInstance()->free(buff);
-        return;
-    }
-
-    for(hf_uint16 i = 0; i < size; i++)
-    {
-        if(buyGoods->Count >= GOODSMAXCOUNT)
-        {
-            t_goods.Position = OperationGoods::GetEmptyPos(conn);
-            t_goods.Count = GOODSMAXCOUNT;
-            buyGoods->Count -= GOODSMAXCOUNT;
-            goods_it->second.push_back(t_goods);
-            memcpy(buff + sizeof(STR_PackHead) + i * sizeof(STR_Goods), &t_goods, sizeof(STR_Goods));
-
+            i++;
             t_post->PushUpdateGoods(roleid, &t_goods, PostInsert); //将新买的物品添加到list
-            continue;
+            break;
         }
-        for(vector<STR_Goods>::iterator vec = goods_it->second.begin(); vec != goods_it->second.end();)
+        Server::GetInstance()->GetGameTask()->UpdateCollectGoodsTaskProcess(conn, buyGoods->GoodsID);
+       (*t_playerGoods)[t_goods.GoodsID] = t_vec;
+    }
+    else
+    {
+        //先将未放满的格子放满
+        for(vector<STR_Goods>::iterator vec = goods_it->second.begin(); vec != goods_it->second.end(); vec++)
         {
+            if(vec->Count == GOODSMAXCOUNT)
+            {
+                continue;
+            }
             if(vec->Count + buyGoods->Count <= GOODSMAXCOUNT) //当前位置能放下剩余的物品
             {
                 t_goods.Position = vec->Position;
                 t_goods.Count = vec->Count + buyGoods->Count;
                 vec->Count = t_goods.Count;
+                buyGoods->Count = 0;
                 memcpy(buff + sizeof(STR_PackHead) + i * sizeof(STR_Goods), &t_goods, sizeof(STR_Goods));
-
+                i++;
                 t_post->PushUpdateGoods(roleid, &t_goods, PostUpdate); //将新买的物品添加到list
                 break;
             }
-            vec++;
-            if(vec == goods_it->second.end()) //开辟新位置放下剩余的物品
+            else
             {
-                t_goods.Position = OperationGoods::GetEmptyPos(conn);
-                t_goods.Count = buyGoods->Count;
-                goods_it->second.push_back(t_goods);
+                t_goods.Position = vec->Position;
+                buyGoods->Count = buyGoods->Count + vec->Count - GOODSMAXCOUNT;
+                t_goods.Count = GOODSMAXCOUNT;
+                vec->Count = GOODSMAXCOUNT;
                 memcpy(buff + sizeof(STR_PackHead) + i * sizeof(STR_Goods), &t_goods, sizeof(STR_Goods));
-
-                t_post->PushUpdateGoods(roleid, &t_goods, PostInsert); //将新买的物品添加到list
-                break;
+                i++;
+                t_post->PushUpdateGoods(roleid, &t_goods, PostUpdate); //将新买的物品添加到list
+                continue;
             }
         }
+
+        while(buyGoods->Count > 0) //开辟新位置放下剩余的物品
+        {
+            t_goods.Position = OperationGoods::GetEmptyPos(conn);
+            if(buyGoods->Count > GOODSMAXCOUNT)
+            {
+                t_goods.Count = GOODSMAXCOUNT;
+                buyGoods->Count -= GOODSMAXCOUNT;
+            }
+            else
+            {
+                t_goods.Count = buyGoods->Count;
+                buyGoods->Count = 0;
+            }
+            goods_it->second.push_back(t_goods);
+            memcpy(buff + sizeof(STR_PackHead) + i * sizeof(STR_Goods), &t_goods, sizeof(STR_Goods));
+            i++;
+            t_post->PushUpdateGoods(roleid, &t_goods, PostInsert); //将新买的物品添加到list
+        }
     }
+
     //给客户端更新背包物品变化和金钱
     STR_PackHead t_packHead;
-    t_packHead.Len = sizeof(STR_Goods)*size;
+    t_packHead.Len = sizeof(STR_Goods)*i;
     t_packHead.Flag = FLAG_BagGoods;
     memcpy(buff, &t_packHead, sizeof(STR_PackHead));
     conn->Write_all(buff, sizeof(STR_PackHead) + t_packHead.Len);
@@ -1112,6 +1110,7 @@ void OperationGoods::BuyOtherGoods(TCPConnection::Pointer conn, STR_BuyGoods* bu
     memcpy(buff + sizeof(STR_PackHead), money, sizeof(STR_Goods));
     conn->Write_all(buff, sizeof(STR_PackHead) + t_packHead.Len);
     Server::GetInstance()->free(buff);
+
 }
 
 
