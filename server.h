@@ -73,6 +73,12 @@ public:
         m_task_pool.schedule(task);
     }
 
+    template <typename T>
+    void RunCmdparse(T task)
+    {
+        m_cmdparse_pool.schedule(task);
+    }
+
     static Server*          GetInstance();
 
     DiskDBManager* getDiskDB()
@@ -133,10 +139,15 @@ public:
     void PushPackage(STR_Package package)
     {
         m_package->push(package);
+        push_num++;
+        if(push_num - pop_num > 10000)
+            printf("push_num - pop_num:%u,%u,%u\n", push_num,pop_num,push_num - pop_num);
     }
 
     void PopPackage();
 
+    hf_uint32 push_num;
+    hf_uint32 pop_num;
 private:
     Server();
     static  Server                 *m_instance;
@@ -144,6 +155,7 @@ private:
     DiskDBManager                  *m_DiskDB;
     ////////////////////////////////////////////////////
     boost::threadpool::pool         m_task_pool;
+    boost::threadpool::pool         m_cmdparse_pool;
     boost::pool<>                   m_memory_factory;
     boost::mutex                    m_mtx;
     Monster                         *m_monster;

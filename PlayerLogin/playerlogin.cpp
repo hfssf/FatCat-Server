@@ -121,41 +121,6 @@ void PlayerLogin::SavePlayerOfflineData(TCPConnection::Pointer conn)
     Logger::GetLogger()->Debug("player exit success");
 }
 
-//用户下线删除保存的对应的<nick, sock>
-//void PlayerLogin::DeleteNickSock(TCPConnection::Pointer conn)
-//{
-//    SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
-
-//    SessionMgr::umap_nickSock nickSock = SessionMgr::Instance()->GetNickSock();
-//    SessionMgr::_umap_nickSock::iterator t_nickSock = nickSock->find((*smap)[conn].m_RoleBaseInfo.Nick);
-//    if(t_nickSock != nickSock->end())
-//    {
-//        nickSock->erase(t_nickSock); //删除m_nickSock
-//    }
-//}
-
-//void PlayerLogin::DeleteNameSock(TCPConnection::Pointer conn)
-//{
-//    SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
-
-//    SessionMgr::umap_nickSock nameSock = SessionMgr::Instance()->GetNameSock();
-//    SessionMgr::_umap_nickSock::iterator t_nameSock = nameSock->find((*smap)[conn].m_usrid);
-//    if(t_nameSock != nameSock->end())
-//    {
-//        nameSock->erase(t_nameSock); //删除m_nameSock
-//    }
-//}
-
-// void PlayerLogin::DeleteRoleSock(hf_uint32 roleid)
-// {
-//     umap_roleSock t_roleSock = SessionMgr::Instance()->GetRoleSock();
-//     _umap_roleSock::iterator role_it = t_roleSock->find(roleid);
-//     if(role_it != t_roleSock->end())
-//     {
-//         t_roleSock->erase(roleid); //删除m_roleSock
-//     }
-// }
-
 void PlayerLogin::RegisterUserID(TCPConnection::Pointer conn, STR_PlayerRegisterUserId *reg)
 {
     Logger::GetLogger()->Debug("Client Register UserID");
@@ -450,8 +415,6 @@ void PlayerLogin::LoginRole(TCPConnection::Pointer conn, hf_uint32 roleid)
             conn->Write_all(&t_roleInfo, sizeof(STR_PackRoleInfo));
             SessionMgr::Instance()->SaveSession(conn, &t_roleInfo.RoleInfo);
         }
-
-
 
         SendRoleExperence(conn);            //发送角色经验
         SendFriendList(conn, roleid);       //发送好友列表
@@ -963,9 +926,9 @@ void PlayerLogin::SendOffLineToViewRole(TCPConnection::Pointer conn)
     {
         it->second->Write_all(&RoleLeave, sizeof(STR_PackRoleLeave));
         (*smap)[it->second].m_viewRole->erase(roleid);
-         _umap_roleSock::iterator iter = it;
+//         _umap_roleSock::iterator iter = it;
          it++;
-        (*smap)[conn].m_viewRole->erase((*smap)[iter->second].m_roleid);
+//        (*smap)[conn].m_viewRole->erase((*smap)[iter->second].m_roleid);
     }
 }
 
