@@ -31,7 +31,15 @@ bool MemDBManager::Connect(Configuration con)
 
 bool MemDBManager::Connect()
 {
-
+    m_redis = redisConnect(REDISIP, REDISPORT);
+    if(m_redis == NULL || m_redis->err)
+    {
+        printf("Error: %s\n", m_redis->errstr);
+        redisFree(m_redis);
+        return false;
+    }
+    else
+        return true;
 }
 
 bool MemDBManager::Disconnect()
