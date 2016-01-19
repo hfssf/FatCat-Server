@@ -2,6 +2,9 @@
 #include "./../PlayerLogin/playerlogin.h"
 #include "./../server.h"
 #include "./../memManage/diskdbmanager.h"
+#include "./../memManage/memdbmanager.h"
+
+#include <cstdio>
 
 OperationPostgres::OperationPostgres():
     m_UpdateMoney(new boost::lockfree::queue<UpdateMoney>(100)),
@@ -24,6 +27,106 @@ OperationPostgres::~OperationPostgres()
     delete m_UpdateEquAttr;
     delete m_UpdateTask;
     delete m_UpdateCompleteTask;
+}
+
+//该函数负责实时将玩家数据写入数据库
+void OperationPostgres::UpdateRedisData()
+{
+    UpdateMoney t_updateMoney;
+    UpdateLevel t_updateLevel;
+    UpdateExp t_updateExp;
+    UpdateGoods t_updateGoods;
+    UpdateEquAttr t_updateEquAttr;
+    UpdateTask t_updateTask;
+    UpdateCompleteTask t_comTask;
+    MemDBManager* t_redis = Server::GetInstance()->getMemDB();
+    hf_char buff[64] = { 0 };
+    while(1)
+    {
+        if(m_UpdateMoney->pop(t_updateMoney))
+        {
+            t_redis->SetC("set %u%u %u",t_updateMoney.RoleID, t_updateMoney.Money.TypeID,t_updateMoney.Money.Count);
+
+
+//            memset(buff, 0 ,sizeof(buff));
+//            sprintf(buff,"get %d%d",t_updateMoney.RoleID, t_updateMoney.Money.TypeID);
+//            hf_char* money = (hf_char*)t_redis->Get(buff);
+//            hf_uint32 monenCount = atoi(money);
+//            free(money);
+        }
+
+        if(m_UpdateLevel->pop(t_updateLevel))
+        {
+            t_redis->SetC("set %u %u",t_updateLevel.RoleID, t_updateLevel.Level);
+        }
+
+        if(m_UpdateExp->pop(t_updateExp))
+        {
+            t_redis->SetC("set %u0 %u",t_updateExp.RoleID, t_updateExp.Exp);
+        }
+
+
+        if(m_UpdateGoods->pop(t_updateGoods))
+        {
+            memset(buff, 0 ,sizeof(buff));
+            if(t_updateGoods.Operate == PostDelete)
+            {
+               sprintf(buff,"del %u%u",t_updateGoods.RoleID,t_updateGoods.Goods.Position);
+                t_redis->DelKey(buff);
+            }
+            else
+            {
+                sprintf(buff,"%u%u",t_updateGoods.RoleID,t_updateGoods.Goods.Position);
+                t_redis->SetB(buff,&t_updateGoods.Goods, sizeof(t_updateGoods.Goods));
+
+//                memset(buff, 0 ,sizeof(buff));
+//                sprintf(buff,"get %u%u",t_updateGoods.RoleID,t_updateGoods.Goods.Position);
+//                STR_Goods* goods = (STR_Goods*)t_redis->Get(buff);
+//                free(goods);
+            }
+        }
+
+        if(m_UpdateEquAttr->pop(t_updateEquAttr))
+        {
+            if(t_updateEquAttr.Operate == PostDelete)
+            {
+                memset(buff, 0 ,sizeof(buff));
+                sprintf(buff,"del %u%u",t_updateEquAttr.RoleID,t_updateEquAttr.EquAttr.EquID);
+                 t_redis->DelKey(buff);
+            }
+            else
+            {
+                memset(buff, 0 ,sizeof(buff));
+                sprintf(buff,"%u%u",t_updateEquAttr.RoleID,t_updateEquAttr.EquAttr.EquID);
+                t_redis->SetB(buff,&t_updateEquAttr.EquAttr, sizeof(t_updateEquAttr.EquAttr));
+            }
+        }
+
+        if(m_UpdateTask->pop(t_updateTask))
+        {
+            if(t_updateTask.Operate == PostDelete)
+            {
+                memset(buff, 0 ,sizeof(buff));
+                sprintf(buff,"del %u%u",t_updateTask.RoleID,t_updateTask.TaskProcess.TaskID);
+                 t_redis->DelKey(buff);
+            }
+            else
+            {
+                memset(buff, 0 ,sizeof(buff));
+                sprintf(buff,"%u%u",t_updateTask.RoleID,t_updateTask.TaskProcess.TaskID);
+                t_redis->SetB(buff,&t_updateTask.TaskProcess, sizeof(t_updateTask.TaskProcess));
+            }
+        }
+
+        if(m_UpdateCompleteTask->pop(t_comTask))
+        {
+            memset(buff, 0 ,sizeof(buff));
+            sprintf(buff,"del %u%u",t_comTask.RoleID,t_comTask.TaskID);
+             t_redis->DelKey(buff);
+        }
+
+        usleep(1000);
+    }
 }
 
 //该函数负责实时将玩家数据写入数据库
@@ -84,14 +187,14 @@ void OperationPostgres::UpdatePostgresData()
 
 
         usleep(1000);
-        if(connectTime++ == 300000)
-        {
-            if(Server::GetInstance()->getDiskDB()->GetSqlResult("select * from t_skillinfo where skillid = 0") == -1)
-            {
-                printf("postgres break off\n");
-            }
-            connectTime = 0;
-        }
+//        if(connectTime++ == 300000)
+//        {
+//            if(Server::GetInstance()->getDiskDB()->GetSqlResult("select * from t_skillinfo where skillid = 0") == -1)
+//            {
+//                printf("postgres break off\n");
+//            }
+//            connectTime = 0;
+//        }
     }
 }
 

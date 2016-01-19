@@ -20,9 +20,15 @@ public:
      * @param str
      * @return
      */
-    hf_int32 Set(const char* str,...);
-    void* SetA(const char *str);
-    void* SetB(const char *key, void *value, int len);
+    hf_int32 Set(const char* str,...)
+    {
+        return 0;
+    }
+
+    bool SetA(const char *str);
+    void SetB(const char *key, void *value, int len);
+    void* SetC(const char *str, ...);
+    void DelKey(const char* str);
 
     /**
      * @brief Set

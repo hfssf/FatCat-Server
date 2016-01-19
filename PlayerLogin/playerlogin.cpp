@@ -40,9 +40,14 @@ void PlayerLogin::ReturnRoleListSaveData(TCPConnection::Pointer conn)
         Logger::GetLogger()->Error("update player position error");
     }
 
+    SaveRoleTaskProcess(conn);    //保存玩家任务进度
+    SaveRoleBagGoods(conn);       //保存玩家背包里的物品
+    SaveRoleEquAttr(conn);        //保存玩家装备属性
+    SaveRoleMoney(conn);          //保存玩家金币
+
     SaveRoleInfo(conn);           //更新角色属性
     DeleteFromMonsterView(conn);  //从怪物可视范围内删除该玩家
-    SaveRoleEquDurability(conn);  //将玩家装备当前耐久度更新到数据库
+//    SaveRoleEquDurability(conn);  //将玩家装备当前耐久度更新到数据库
     FriendOffline(conn);          //发送下线通知给好友
     SaveRoleNotPickGoods(conn);   //保存玩家未捡取的掉落物品
     SendOffLineToViewRole(conn);  //将下线消息通知给可视范围内的玩家
@@ -87,10 +92,15 @@ void PlayerLogin::SavePlayerOfflineData(TCPConnection::Pointer conn)
         Logger::GetLogger()->Error("update player position error");
     }
 
+    SaveRoleTaskProcess(conn);    //保存玩家任务进度
+    SaveRoleBagGoods(conn);       //保存玩家背包里的物品
+    SaveRoleEquAttr(conn);        //保存玩家装备属性
+    SaveRoleMoney(conn);          //保存玩家金币
+
 
     SaveRoleInfo(conn);           //更新角色属性
     DeleteFromMonsterView(conn);  //从怪物可视范围内删除该玩家
-    SaveRoleEquDurability(conn);  //将玩家装备当前耐久度更新到数据库
+//    SaveRoleEquDurability(conn);  //将玩家装备当前耐久度更新到数据库
     FriendOffline(conn);          //发送下线通知给好友
     SaveRoleNotPickGoods(conn);   //保存玩家未捡取的掉落物品
     SendOffLineToViewRole(conn);  //将下线消息通知给可视范围内的玩家
@@ -816,6 +826,27 @@ void PlayerLogin::SaveRoleEquDurability(TCPConnection::Pointer conn)
     }   
 }
 
+//将玩家装备属性写进数据库
+void PlayerLogin::SaveRoleEquAttr(TCPConnection::Pointer conn)
+{
+    SessionMgr::SessionMap *smap =  SessionMgr::Instance()->GetSession().get();
+    umap_roleEqu t_roleEqu = (*smap)[conn].m_playerEqu;
+    StringBuilder sbd;
+    hf_uint32 roleid = (*smap)[conn].m_roleid;
+
+    sbd << "delete from t_playerequattr where roleid = " << roleid << ";";
+
+     Logger::GetLogger()->Debug(sbd.str());
+    if(Server::GetInstance()->getDiskDB()->Set(sbd.str()) == -1)
+    {
+        Logger::GetLogger()->Error("清除玩家任务信息失败");
+    }
+    for(_umap_roleEqu::iterator it = t_roleEqu->begin(); it != t_roleEqu->end(); it++)
+    {
+        InsertPlayerGoods(roleid, &it->second.goods);
+        InsertPlayerEquAttr(roleid, &it->second.equAttr);
+    }
+}
 //将玩家金钱写进数据库
 void PlayerLogin::SaveRoleMoney(TCPConnection::Pointer conn)
 {

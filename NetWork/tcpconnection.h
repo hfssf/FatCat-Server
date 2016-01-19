@@ -100,6 +100,15 @@ public:
         m_LoginStatusMtx.unlock();
     }
 
+    void LockSessionMtx()
+    {
+        m_SessionMtx.lock();
+    }
+    void UnLockSessionMtx()
+    {
+        m_SessionMtx.unlock();
+    }
+
     boost::mutex          m_write_lock;
     boost::mutex          m_read_lock;
     boost::timed_mutex    m_w_lock;
@@ -120,6 +129,7 @@ private:
     hf_uint8                m_LoginStatus;  //0表示未登录用户，1表示已经登录用户，未登录角色， 2表示已经登录角色
 //    boost::shared_mutex     m_LoginStatusMtx;
     boost::mutex            m_LoginStatusMtx;
+    boost::shared_mutex     m_SessionMtx;
     int                     m_write_len;
 
     boost::asio::io_service::strand m_strand;

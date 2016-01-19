@@ -48,116 +48,134 @@ bool MemDBManager::Disconnect()
     return true;
 }
 
+
 //可变参
-//void *MemDBManager::Set(const char *format,...)
-//{
-//    va_list ap;
-//    void *reply = NULL;
-//    va_start(ap,format);
-//    reply = redisvCommand(m_redis,format,ap);
-//    va_end(ap);
-//    return reply;
-//}
-
-//void *MemDBManager::SetB(const char *key, void *value, int len)
-//{
-//    char buf[256] = {0};
-////    return Set("LPUSH %s %b",key,value,len);
-//    return Set("SET %s %b",key,value,len);
-//}
-
-hf_int32 MemDBManager::Set(const char *format,...)
+void* MemDBManager::SetC(const char *format,...)
 {
-//    return 0;
+    va_list ap;
+    void *t_reply = NULL;
+    va_start(ap,format);
+    t_reply = redisvCommand(m_redis,format,ap);
+    va_end(ap);
+    return t_reply;
 }
 
-void* MemDBManager::SetA(const char* setStr)
+void MemDBManager::SetB(const char *key, void *value, int len)
 {
-//    redisReply* t_reply = (redisReply*)redisCommand(m_redis, setStr);
-//    Result* t_result = new Result;
-//    if(!(t_reply->type == REDIS_REPLY_STATUS && strcasecmp(t_reply->str, "OK") == 0))
-//    {
-//       printf("redisCommand %s error\n",setStr);
-//       freeReplyObject(t_reply);
-//       redisFree(m_redis);
-//       t_result->result = false;
-//       return t_result;
-//    }
-//    else
-//    {
-//        freeReplyObject(t_reply);
-//        t_result->result = true;
-//        return t_result;
-//    }
+//    char buf[256] = {0};
+//    return Set("LPUSH %s %b",key,value,len);
+    printf(" Set %s %s\n", key, value);
+
+    redisReply* t_reply = (redisReply*)SetC("SET %s %b",key,value,len);
+    if(!t_reply)
+    {
+        redisFree(m_redis);
+        printf("redisCommand set %s error\n", key);
+        Connect();
+        SetC("SET %s %b",key,value,len);
+    }
+    if(!(t_reply->type == REDIS_REPLY_STATUS && strcasecmp(t_reply->str, "OK") == 0))
+    {
+       printf("redisCommand %s error\n",key);
+       freeReplyObject(t_reply);
+    }
+}
+
+void MemDBManager::DelKey(const char* str)
+{
+    redisReply* t_reply = (redisReply*)redisCommand(m_redis, str);
+    if(!t_reply)
+    {
+       redisFree(m_redis);
+       printf("redisCommand %s error\n",str);
+       Connect();
+       DelKey(str);
+    }
+    else
+    {
+        freeReplyObject(t_reply);
+    }
+}
+
+
+bool MemDBManager::SetA(const char* setStr)
+{
+    redisReply* t_reply = (redisReply*)redisCommand(m_redis, setStr);
+    if(!t_reply)
+    {
+        redisFree(m_redis);
+        Connect();
+        SetA(setStr);
+    }
+    if(!(t_reply->type == REDIS_REPLY_STATUS && strcasecmp(t_reply->str, "OK") == 0))
+    {
+       printf("redisCommand %s error\n",setStr);
+       freeReplyObject(t_reply);
+       return false;
+    }
+    else
+    {
+        freeReplyObject(t_reply);
+        return true;
+    }
 }
 
 
 void* MemDBManager::Get(const char* getStr)
 {
-//    redisReply* t_reply = (redisReply*)redisCommand(m_redis, getStr);
-//    Result* t_result = new Result;
-//    if(t_reply == NULL || t_reply->type == REDIS_REPLY_ERROR)
-//    {
-//        printf("redisCommand %s error\n",getStr);
-//        freeReplyObject(t_reply);
-//        redisFree(m_redis);
-//        t_result->result = false;
-//        return t_result;
-//    }
-//    else if(t_reply->type == REDIS_REPLY_NIL)
-//    {
-//        printf("key value does not exist\n");
-//        freeReplyObject(t_reply);
-//        t_result->result = false;
-//        return t_result;
-//    }
-//    else if(t_reply->type == REDIS_REPLY_STRING) //字符串
-//    {
-//        int t_length = t_reply->len;
-//        char* t_res = new char[t_length + sizeof(Result) + 1];
-//        if(t_res == NULL)
-//        {
-//            t_result->result = false;
-//            freeReplyObject(t_reply);
-//            return t_result;
-//        }
-//        else
-//        {
-//            t_result->result = true;
-//            memcpy(t_res, t_result,sizeof(Result));
-//            memcpy(t_res, t_reply->str, t_length);
-//            freeReplyObject(t_reply);
-//            delete t_result;
-//            return t_res;
-//        }
-//    }
-//    else if(t_reply->type == REDIS_REPLY_INTEGER) //整数
-//    {
+    redisReply* t_reply = (redisReply*)redisCommand(m_redis, getStr);
+    if(t_reply == NULL || t_reply->type == REDIS_REPLY_ERROR)
+    {
+        printf("redisCommand %s error\n",getStr);
+        freeReplyObject(t_reply);
+        redisFree(m_redis);
+        return NULL;
+    }
+    else if(t_reply->type == REDIS_REPLY_NIL)
+    {
+        printf("key value does not exist\n");
+        freeReplyObject(t_reply);
+        return NULL;
+    }
+    else if(t_reply->type == REDIS_REPLY_STRING) //字符串
+    {
+        int t_length = t_reply->len;
+        char* t_res = new char[t_length + 1];
+        if(t_res == NULL)
+        {
+            freeReplyObject(t_reply);
+            return NULL;
+        }
+        else
+        {
+            memcpy(t_res, t_reply->str, t_length);
+            freeReplyObject(t_reply);
+            return t_res;
+        }
+    }
+    else if(t_reply->type == REDIS_REPLY_INTEGER) //整数
+    {
 
-//        long long num = t_reply->integer;
-//        char* t_res = new char[sizeof(num) + sizeof(Result) + 1];
-//        if(t_res == NULL)
-//        {
-//            t_result->result = false;
-//            freeReplyObject(t_reply);
-//            return t_result;
-//        }
-//        else
-//        {
-//            t_result->result = true;
-//            memset(t_res, 0, sizeof(num) + sizeof(Result) + 1);
-//            memcpy(t_res, t_result, sizeof(Result));
-//            memcpy(t_res+sizeof(Result), &num, sizeof(num));
-//            freeReplyObject(t_reply);
-//            delete t_result;
-//            return t_res;
-//        }
-//    }
+        long long num = t_reply->integer;
+        char* t_res = new char[sizeof(num)];
+        if(t_res == NULL)
+        {
+            freeReplyObject(t_reply);
+            return NULL;
+        }
+        else
+        {
+            memset(t_res, 0, sizeof(num));
+            memcpy(t_res, &num, sizeof(num));
+            freeReplyObject(t_reply);
+            return t_res;
+        }
+    }
 //    else if(t_reply->type == REDIS_REPLY_ARRAY) //数组
 //    {
 //        for(int i = 0; i < t_reply->elements; i++)
 //            redisReply* childReply = r_element[i];
-//        if(childReply->type ==)
+
 
 //    }
 }

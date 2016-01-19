@@ -10,6 +10,7 @@ public:
     OperationPostgres();
     ~OperationPostgres();
 
+    void UpdateRedisData();
     //该函数负责实时将玩家数据写入数据库
     void UpdatePostgresData();
 

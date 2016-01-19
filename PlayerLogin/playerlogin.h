@@ -98,6 +98,8 @@ public:
     void SaveRoleBagGoods(TCPConnection::Pointer conn);
     //将玩家装备当前耐久度更新到数据库
     void SaveRoleEquDurability(TCPConnection::Pointer conn);
+    //将玩家装备属性写进数据库
+    void SaveRoleEquAttr(TCPConnection::Pointer conn);
     //将玩家金钱写进数据库
     void SaveRoleMoney(TCPConnection::Pointer conn);
     //将下线消息通知给可视范围内的玩家
