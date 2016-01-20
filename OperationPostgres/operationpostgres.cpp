@@ -52,7 +52,7 @@ void OperationPostgres::UpdateRedisData()
 //            sprintf(buff,"get %d%d",t_updateMoney.RoleID, t_updateMoney.Money.TypeID);
 //            hf_char* money = (hf_char*)t_redis->Get(buff);
 //            hf_uint32 monenCount = atoi(money);
-//            free(money);
+//            Server::GetInstance()->free(money);
         }
 
         if(m_UpdateLevel->pop(t_updateLevel))
@@ -82,7 +82,7 @@ void OperationPostgres::UpdateRedisData()
 //                memset(buff, 0 ,sizeof(buff));
 //                sprintf(buff,"get %u%u",t_updateGoods.RoleID,t_updateGoods.Goods.Position);
 //                STR_Goods* goods = (STR_Goods*)t_redis->Get(buff);
-//                free(goods);
+//                Server::Instance()->free(goods);
             }
         }
 

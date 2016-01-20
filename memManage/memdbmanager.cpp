@@ -5,6 +5,7 @@
 
 #include "memdbmanager.h"
 #include "diskdbmanager.h"
+#include "server.h"
 
 MemDBManager::MemDBManager()
 {
@@ -140,7 +141,7 @@ void* MemDBManager::Get(const char* getStr)
     else if(t_reply->type == REDIS_REPLY_STRING) //字符串
     {
         int t_length = t_reply->len;
-        char* t_res = new char[t_length + 1];
+        hf_char* t_res = (hf_char*)Server::GetInstance()->malloc();
         if(t_res == NULL)
         {
             freeReplyObject(t_reply);
@@ -157,7 +158,7 @@ void* MemDBManager::Get(const char* getStr)
     {
 
         long long num = t_reply->integer;
-        char* t_res = new char[sizeof(num)];
+        hf_char* t_res = (hf_char*)Server::GetInstance()->malloc();
         if(t_res == NULL)
         {
             freeReplyObject(t_reply);
@@ -165,7 +166,6 @@ void* MemDBManager::Get(const char* getStr)
         }
         else
         {
-            memset(t_res, 0, sizeof(num));
             memcpy(t_res, &num, sizeof(num));
             freeReplyObject(t_reply);
             return t_res;
