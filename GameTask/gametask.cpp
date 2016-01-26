@@ -176,7 +176,7 @@ void GameTask::QuitTask(TCPConnection::Pointer conn, hf_uint32 taskid)
 }
 
 //请求完成任务
-void GameTask::AskFinishTask(TCPConnection::Pointer conn, STR_FinishTask* finishTask)
+void GameTask::AskFinishTask(TCPConnection::Pointer conn, STR_PackFinishTask* finishTask)
 {
     SessionMgr::SessionPointer smap = SessionMgr::Instance()->GetSession();
     umap_taskProcess playerAcceptTask = (*smap)[conn].m_playerAcceptTask;
@@ -225,7 +225,7 @@ void GameTask::AskFinishTask(TCPConnection::Pointer conn, STR_FinishTask* finish
     Server::GetInstance()->free(finishTask);
 }
 
-bool GameTask::TaskFinishGoodsReward(TCPConnection::Pointer conn, STR_FinishTask* finishTask)
+bool GameTask::TaskFinishGoodsReward(TCPConnection::Pointer conn, STR_PackFinishTask* finishTask)
 {
     SessionMgr::SessionPointer smap = SessionMgr::Instance()->GetSession();
     umap_goodsReward::iterator goodsReward_it = m_goodsReward->find(finishTask->TaskID);
@@ -353,7 +353,7 @@ bool GameTask::TaskFinishGoodsReward(TCPConnection::Pointer conn, STR_FinishTask
     return true;
 }
 
-void GameTask::TaskFinishTaskReward(TCPConnection::Pointer conn, STR_FinishTask* finishTask)
+void GameTask::TaskFinishTaskReward(TCPConnection::Pointer conn, STR_PackFinishTask* finishTask)
 {
     SessionMgr::SessionPointer smap = SessionMgr::Instance()->GetSession();
     umap_taskReward::iterator taskReward_it = m_taskReward->find(finishTask->TaskID);
@@ -668,7 +668,7 @@ void GameTask::TaskReward(TCPConnection::Pointer conn, hf_uint32 taskid)
     srv->free(buff);
 }
 
-void GameTask::AskTaskExeDialog(TCPConnection::Pointer conn, STR_AskTaskExeDlg* exeDlg)
+void GameTask::AskTaskExeDialog(TCPConnection::Pointer conn, STR_PackAskTaskExeDlg* exeDlg)
 {
     umap_exeDialogue::iterator it = (*m_exeDialogue).find(exeDlg->TaskID);
     if(it == m_exeDialogue->end())
@@ -698,7 +698,7 @@ void GameTask::AskTaskExeDialog(TCPConnection::Pointer conn, STR_AskTaskExeDlg* 
     Server::GetInstance()->free(exeDlg);
 }
 
-void GameTask::TaskExeDialogFinish(TCPConnection::Pointer conn, STR_AskTaskExeDlg* exeDlg)
+void GameTask::TaskExeDialogFinish(TCPConnection::Pointer conn, STR_PackAskTaskExeDlg* exeDlg)
 {
     SessionMgr::SessionPointer smap = SessionMgr::Instance()->GetSession();
     umap_taskProcess t_task = (*smap)[conn].m_playerAcceptTask;

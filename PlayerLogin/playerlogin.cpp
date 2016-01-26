@@ -22,6 +22,11 @@ PlayerLogin::~PlayerLogin()
 
 void PlayerLogin::ReturnRoleListSaveData(TCPConnection::Pointer conn)
 {
+    if ( conn->isSaved() )
+    {
+        Logger::GetLogger()->Debug("offline data has been saved, exit to avoid repeating save");
+        return;
+    }
     conn->LockLoginStatus();
 
 
@@ -47,7 +52,7 @@ void PlayerLogin::ReturnRoleListSaveData(TCPConnection::Pointer conn)
 
     SaveRoleInfo(conn);           //更新角色属性
     DeleteFromMonsterView(conn);  //从怪物可视范围内删除该玩家
-//    SaveRoleEquDurability(conn);  //将玩家装备当前耐久度更新到数据库
+   //SaveRoleEquDurability(conn);  //将玩家装备当前耐久度更新到数据库
     FriendOffline(conn);          //发送下线通知给好友
     SaveRoleNotPickGoods(conn);   //保存玩家未捡取的掉落物品
     SendOffLineToViewRole(conn);  //将下线消息通知给可视范围内的玩家
@@ -56,11 +61,18 @@ void PlayerLogin::ReturnRoleListSaveData(TCPConnection::Pointer conn)
 
     conn->ChangePlayerLoginStatus(PlayerNotLoginUser);
     conn->UnlockLoginStatus();
+    conn->setSaveStatus(true);
+    Logger::GetLogger()->Debug("player exit success");
 }
 
 //保存玩家角色退出数据，并发送下线通知给其他玩家
 void PlayerLogin::SavePlayerOfflineData(TCPConnection::Pointer conn)
 {
+    if ( conn->isSaved() )
+    {
+        Logger::GetLogger()->Debug("offline data has been saved, exit to avoid repeating save");
+        return;
+    }
     Server *srv = Server::GetInstance();
     SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
     conn->LockLoginStatus();
@@ -97,10 +109,9 @@ void PlayerLogin::SavePlayerOfflineData(TCPConnection::Pointer conn)
     SaveRoleEquAttr(conn);        //保存玩家装备属性
     SaveRoleMoney(conn);          //保存玩家金币
 
-
     SaveRoleInfo(conn);           //更新角色属性
     DeleteFromMonsterView(conn);  //从怪物可视范围内删除该玩家
-//    SaveRoleEquDurability(conn);  //将玩家装备当前耐久度更新到数据库
+    //SaveRoleEquDurability(conn);  //将玩家装备当前耐久度更新到数据库
     FriendOffline(conn);          //发送下线通知给好友
     SaveRoleNotPickGoods(conn);   //保存玩家未捡取的掉落物品
     SendOffLineToViewRole(conn);  //将下线消息通知给可视范围内的玩家
@@ -110,28 +121,46 @@ void PlayerLogin::SavePlayerOfflineData(TCPConnection::Pointer conn)
 
     conn->ChangePlayerLoginStatus(PlayerNotLoginUser);
     conn->UnlockLoginStatus();
-
-
-    ///////////////////////////////////////////////////
-//    SessionMgr::SessionMap::iterator it = smap->find(conn);
-//    if(it != smap->end())
-//    {
-//        if((*smap)[conn].m_interchage->isInchange)         //如果正在交易中
-//        {
-//            TCPConnection::Pointer partnerConn = (*smap)[conn].m_interchage->partnerConn;
-//            SessionMgr::SessionMap::iterator iter = smap->find(partnerConn);
-//            if(iter != smap->end())
-//            {
-//                (*smap)[partnerConn].m_interchage->clear();  //清除交易对方的交易状态
-//            }
-//        }
-//    }
-    //////////////////////////////////////////////////
-
+    conn->setSaveStatus(true);
     Logger::GetLogger()->Debug("player exit success");
 }
 
-void PlayerLogin::RegisterUserID(TCPConnection::Pointer conn, STR_PlayerRegisterUserId *reg)
+//用户下线删除保存的对应的<nick, sock>
+//void PlayerLogin::DeleteNickSock(TCPConnection::Pointer conn)
+//{
+//    SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
+
+//    SessionMgr::umap_nickSock nickSock = SessionMgr::Instance()->GetNickSock();
+//    SessionMgr::_umap_nickSock::iterator t_nickSock = nickSock->find((*smap)[conn].m_RoleBaseInfo.Nick);
+//    if(t_nickSock != nickSock->end())
+//    {
+//        nickSock->erase(t_nickSock); //删除m_nickSock
+//    }
+//}
+
+//void PlayerLogin::DeleteNameSock(TCPConnection::Pointer conn)
+//{
+//    SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
+
+//    SessionMgr::umap_nickSock nameSock = SessionMgr::Instance()->GetNameSock();
+//    SessionMgr::_umap_nickSock::iterator t_nameSock = nameSock->find((*smap)[conn].m_usrid);
+//    if(t_nameSock != nameSock->end())
+//    {
+//        nameSock->erase(t_nameSock); //删除m_nameSock
+//    }
+//}
+
+// void PlayerLogin::DeleteRoleSock(hf_uint32 roleid)
+// {
+//     umap_roleSock t_roleSock = SessionMgr::Instance()->GetRoleSock();
+//     _umap_roleSock::iterator role_it = t_roleSock->find(roleid);
+//     if(role_it != t_roleSock->end())
+//     {
+//         t_roleSock->erase(roleid); //删除m_roleSock
+//     }
+// }
+
+void PlayerLogin::RegisterUserID(TCPConnection::Pointer conn, STR_PackRegisterUserId *reg)
 {
     Logger::GetLogger()->Debug("Client Register UserID");
 
@@ -178,7 +207,7 @@ void PlayerLogin::RegisterUserID(TCPConnection::Pointer conn, STR_PlayerRegister
 
 
 //注册角色，该函数必须在用户名已注册的情况下调用
-void PlayerLogin::RegisterRole(TCPConnection::Pointer conn, STR_PlayerRegisterRole *reg)
+void PlayerLogin::RegisterRole(TCPConnection::Pointer conn, STR_PackRegisterRole *reg)
 {
     Server *srv = Server::GetInstance();
     STR_PackResult t_packResult;
@@ -289,7 +318,7 @@ void PlayerLogin::DeleteRole(TCPConnection::Pointer conn, hf_uint32 roleid)
 }
 
 //登陆帐号,并保存用户会话
-void PlayerLogin::LoginUserId(TCPConnection::Pointer conn, STR_PlayerLoginUserId *reg)
+void PlayerLogin::LoginUserId(TCPConnection::Pointer conn, STR_PackLoginUserId *reg)
 {
     Server *srv = Server::GetInstance();
     StringBuilder       sbd;
@@ -308,10 +337,12 @@ void PlayerLogin::LoginUserId(TCPConnection::Pointer conn, STR_PlayerLoginUserId
 
     //查询该用户的相关信息
     hf_int32 t_row = srv->getDiskDB()->GetPlayerUserId(&user, sbd.str());
+    Logger::GetLogger()->Debug("PlayerLogin::LoginUserId select db rows:%d",t_row);
     if(t_row == 1)
     {
         if(strncmp(user.password, reg->password, 32) == 0) //用户名密码正确
         {
+            Logger::GetLogger()->Debug("usrid and password correct!");
             SessionMgr::umap_nickSock nameSock = SessionMgr::Instance()->GetNameSock();
             SessionMgr::_umap_nickSock::iterator it = nameSock->find(reg->userName);
             if(it != nameSock->end()) //如果用户在线，保存该用户的相关信息，不断开连接
@@ -320,7 +351,6 @@ void PlayerLogin::LoginUserId(TCPConnection::Pointer conn, STR_PlayerLoginUserId
                 t_packHead.Flag = FlAG_UserRepeatLogin;
                 t_packHead.Len = 0;
                 it->second->Write_all(&t_packHead, sizeof(STR_PackHead));
-
                 SavePlayerOfflineData(it->second);
 //                SessionMgr::Instance()->NameSockErase(reg->userName);
             }
@@ -334,6 +364,7 @@ void PlayerLogin::LoginUserId(TCPConnection::Pointer conn, STR_PlayerLoginUserId
             SessionMgr::Instance()->SessionsNameAdd(conn, reg->userName);
             //发送角色列表
             SendRoleList(conn, reg->userName);
+            Logger::GetLogger()->Debug("Role list Sent");
 
             conn->LockLoginStatus();
             conn->ChangePlayerLoginStatus(PlayerLoginUser);
@@ -351,6 +382,7 @@ void PlayerLogin::LoginUserId(TCPConnection::Pointer conn, STR_PlayerLoginUserId
         t_PackResult.result = RESULT_USER_NOTEXIST;
         conn->Write_all(&t_PackResult, sizeof(STR_PackResult));
     }
+    Logger::GetLogger()->Debug("Login check Ok");
     srv->free(reg);
 }
 
@@ -382,6 +414,7 @@ void PlayerLogin::LoginRole(TCPConnection::Pointer conn, hf_uint32 roleid)
         conn->Write_all(&t_packResult, sizeof(STR_PackResult));
 
         Logger::GetLogger()->Debug("Login Role Success");
+
 
         (*smap)[conn].m_roleid = roleid;
 
@@ -425,6 +458,7 @@ void PlayerLogin::LoginRole(TCPConnection::Pointer conn, hf_uint32 roleid)
             conn->Write_all(&t_roleInfo, sizeof(STR_PackRoleInfo));
             SessionMgr::Instance()->SaveSession(conn, &t_roleInfo.RoleInfo);
         }
+
 
         SendRoleExperence(conn);            //发送角色经验
         SendFriendList(conn, roleid);       //发送好友列表
@@ -488,6 +522,7 @@ void PlayerLogin::SendRoleList(TCPConnection::Pointer conn, hf_char* userID)
     //查询角色列表
     ResRoleList t_Rolelist;
     hf_int32 t_row = srv->getDiskDB()->GetPlayerRoleList(&t_Rolelist, sbd.str());
+    Logger::GetLogger()->Debug("SendRoleList select db rows:%d",t_row);
     if(t_row > 0)
     {
         hf_char* buff = (hf_char*)srv->malloc();
@@ -495,12 +530,16 @@ void PlayerLogin::SendRoleList(TCPConnection::Pointer conn, hf_char* userID)
         hf_uint32 j = 0;
         STR_PackHead t_packHead;
         t_packHead.Flag = FLAG_PlayerRoleList;
+        Logger::GetLogger()->Debug("RoleCount:%d",roleCount);
         for(hf_int32 i = 0; i < roleCount; i++)
         {
+
             memcpy(buff + sizeof(STR_PackHead) +  j*sizeof(STR_RoleBasicInfo),&(t_Rolelist.m_Role[i]),sizeof(STR_RoleBasicInfo));
             j++;
+            Logger::GetLogger()->Debug("Send Row List cycle: i =%d",i);
             if(j == (CHUNK_SIZE - sizeof(STR_PackHead))/sizeof(STR_RoleBasicInfo))
             {
+                Logger::GetLogger()->Debug("j= ,j=%d",j);
                 t_packHead.Len = sizeof(STR_RoleBasicInfo) * j;
                 memcpy(buff, &t_packHead, sizeof(STR_PackHead));
                 conn->Write_all(buff, sizeof(STR_PackHead) + t_packHead.Len);
@@ -510,11 +549,15 @@ void PlayerLogin::SendRoleList(TCPConnection::Pointer conn, hf_char* userID)
         }
         if(j != (CHUNK_SIZE - sizeof(STR_PackHead))/sizeof(STR_RoleBasicInfo))
         {
+            Logger::GetLogger()->Debug("j!=,j=%d",j);
             t_packHead.Len = sizeof(STR_RoleBasicInfo) * j;
             memcpy(buff, &t_packHead, sizeof(STR_PackHead));
+            Logger::GetLogger()->Debug("Send buff with TCP");
+            Logger::GetLogger()->Debug("Buffer Length:%d",t_packHead.Len + sizeof(STR_PackHead));
             conn->Write_all(buff, sizeof(STR_PackHead) + t_packHead.Len);
+            Logger::GetLogger()->Debug("Send buff with TCP over");
         }
-
+        Logger::GetLogger()->Debug("Ready to new query");
         sbd.Clear();
         sbd << "select t_playerbodyequipment.roleid,head,headtype,upperbody,upperbodytype,pants,pantstype,shoes,shoestype,belt,belttype,neaklace,neaklacetype,bracelet,bracelettype,leftring,leftringtype,rightring,rightringtype,phone,phonetype,weapon,weapontype from t_playerbodyequipment,t_playerrolelist where t_playerbodyequipment.roleid = t_playerrolelist.roleid and username = '" <<   userID << "' and ifdelete = 0;";
         Logger::GetLogger()->Debug(sbd.str());
@@ -957,9 +1000,9 @@ void PlayerLogin::SendOffLineToViewRole(TCPConnection::Pointer conn)
     {
         it->second->Write_all(&RoleLeave, sizeof(STR_PackRoleLeave));
         (*smap)[it->second].m_viewRole->erase(roleid);
-//         _umap_roleSock::iterator iter = it;
+         _umap_roleSock::iterator iter = it;
          it++;
-//        (*smap)[conn].m_viewRole->erase((*smap)[iter->second].m_roleid);
+        (*smap)[conn].m_viewRole->erase((*smap)[iter->second].m_roleid);
     }
 }
 
@@ -1291,7 +1334,7 @@ void PlayerLogin::SendViewRole(TCPConnection::Pointer conn)
             pushCount++;
 
 
-//            cout << otherRoleid << " jinrushiyefanwei" << roleid<< endl;
+
             (*smap)[conn].ViewRoleAdd(otherRoleid, it->first);
             it->second.ViewRoleAdd(roleid, conn);
 
@@ -1320,11 +1363,8 @@ void PlayerLogin::SendViewRole(TCPConnection::Pointer conn)
                 popCount++;
 
                 it->first->Write_all(&t_leaveHead, sizeof(STR_PackRoleLeave));
-
-                (*smap)[conn].ViewRoleDelete(otherRoleid);
                 it->second.ViewRoleDelete(roleid);
 //                it->second.m_viewRole->erase(roleid);
-//                (*smap)[conn].m_viewRole->erase((*smap)[iter->second].m_roleid);
             }
         }
     }

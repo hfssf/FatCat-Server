@@ -72,11 +72,10 @@ public:
     {
         m_task_pool.schedule(task);
     }
-
     template <typename T>
-    void RunCmdparse(T task)
+    void RunPackTask( T task)
     {
-        m_cmdparse_pool.schedule(task);
+        m_pack_pool.schedule(task);
     }
 
     static Server*          GetInstance();
@@ -138,16 +137,35 @@ public:
 
     void PushPackage(STR_Package package)
     {
+        _push_times += 1;
+        uint16_t t = 0;
+//        Logger::GetLogger()->Debug("Queue length:%d",getQueueLength());
+        while ( getQueueLength() > 50 )
+        {
+            usleep(1000);
+            t++;
+//            Logger::GetLogger()->Debug("Queue length:%d",getQueueLength());
+//            Logger::GetLogger()->Debug("Wait for server to process package");
+            if ( t > 1000 )
+            {
+                Logger::GetLogger()->Debug("Queue length:%d",getQueueLength());
+                break;
+            }
+        }
         m_package->push(package);
-        push_num++;
-        if(push_num - pop_num > 10000)
-            printf("push_num - pop_num:%u,%u,%u\n", push_num,pop_num,push_num - pop_num);
     }
 
     void PopPackage();
 
-    hf_uint32 push_num;
-    hf_uint32 pop_num;
+    void CmdparseAdd()
+    {
+        _cmdparse += 1;
+    }
+
+    hf_uint32 getCmdparseQueueLength()
+    {
+        return _pop_times - _cmdparse;
+    }
 private:
     Server();
     static  Server                 *m_instance;
@@ -155,7 +173,7 @@ private:
     DiskDBManager                  *m_DiskDB;
     ////////////////////////////////////////////////////
     boost::threadpool::pool         m_task_pool;
-    boost::threadpool::pool         m_cmdparse_pool;
+    boost::threadpool::pool         m_pack_pool;
     boost::pool<>                   m_memory_factory;
     boost::mutex                    m_mtx;
     Monster                         *m_monster;
@@ -170,6 +188,19 @@ private:
     GameChat                        *m_gameChat;
 
     boost::lockfree::queue<STR_Package>            *m_package;
+
+
+    int         getQueueLength() const
+    {
+        return _push_times - _pop_times;
+    }
+
+
+
+    boost::atomic_uint32_t               _push_times;
+    boost::atomic_uint32_t               _pop_times;
+
+    boost::atomic_uint32_t               _cmdparse;
 
 };
 

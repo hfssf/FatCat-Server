@@ -17,16 +17,16 @@ public:
     void SavePlayerOfflineData(TCPConnection::Pointer conn);
 
     //注册用户名
-    void RegisterUserID(TCPConnection::Pointer conn, STR_PlayerRegisterUserId *reg);
+    void RegisterUserID(TCPConnection::Pointer conn, STR_PackRegisterUserId *reg);
 
     //注册角色，该函数必须在用户名已注册的情况下调用
-    void RegisterRole(TCPConnection::Pointer conn, STR_PlayerRegisterRole *reg);
+    void RegisterRole(TCPConnection::Pointer conn, STR_PackRegisterRole *reg);
 
     //删除角色
     void DeleteRole(TCPConnection::Pointer conn, hf_uint32 roleid);
 
     //登陆帐号,并保存用户会话
-    void LoginUserId(TCPConnection::Pointer conn, STR_PlayerLoginUserId *reg);
+    void LoginUserId(TCPConnection::Pointer conn, STR_PackLoginUserId *reg);
 
     //角色登陆
     void LoginRole(TCPConnection::Pointer conn, hf_uint32 roleid);

@@ -165,11 +165,18 @@ typedef struct _STR_PackAskResult
 //}STR_PackTaskExeDialogue;
 
 //11 玩家请求完成任务数据
-typedef struct _STR_FinishTask
+//typedef struct _STR_FinishTask
+//{
+//    hf_uint32           TaskID;
+//    hf_uint32           SelectGoodsID;  // 可能出现奖励物品多选一，玩家选择需要的物品发送给服务器
+//}STR_FinishTask;
+
+typedef struct _STR_PackFinishTask
 {
+    STR_PackHead        head;
     hf_uint32           TaskID;
     hf_uint32           SelectGoodsID;  // 可能出现奖励物品多选一，玩家选择需要的物品发送给服务器
-}STR_FinishTask;
+}STR_PackFinishTask;
 
 typedef struct _STR_PackFinishTaskResult
 {
@@ -400,35 +407,39 @@ typedef struct _LootGoodsOverTime
 
 
 //玩家物品变动数据包,分割移动物品}
-typedef struct _STR_MoveBagGoods
+typedef struct _STR_PackMoveBagGoods
 {
+    STR_PackHead head;
     hf_uint32 CurrentGoodsID;    //当前位置物品ID
     hf_uint32 TargetGoodsID;     //目标位置物品ID
     hf_uint16 Count;             //当前位置移动数量
     hf_uint16 CurrentPos;        //当前位置
     hf_uint16 TargetPos;         //目标位置
-}STR_MoveBagGoods;
+}STR_PackMoveBagGoods;
 
 //玩家丢弃背包物品数据包
-typedef struct _STR_RemoveBagGoods
+typedef struct _STR_PackRemoveBagGoods
 {
+    STR_PackHead head;
     hf_uint32 GoodsID;   //物品ID
     hf_uint8  Position;       //物品在背包里的位置
-}STR_RemoveBagGoods;
+}STR_PackRemoveBagGoods;
 
 //从商店购买东西
-typedef struct _STR_BuyGoods
+typedef struct _STR_PackBuyGoods
 {
+    STR_PackHead head;
     hf_uint32 GoodsID;   //物品ID
     hf_uint16 Count;     //数量
-}STR_BuyGoods;
+}STR_PackBuyGoods;
 
 //将东西卖给商店
-typedef struct _STR_SellGoods
+typedef struct _STR_PackSellGoods
 {
+    STR_PackHead head;
     hf_uint32 GoodsID;
     hf_uint8  Position;
-}STR_SellGoods;
+}STR_PackSellGoods;
 
 //物品价格
 typedef struct _STR_GoodsPrice
@@ -439,11 +450,12 @@ typedef struct _STR_GoodsPrice
 }STR_GoodsPrice;
 
 //18.玩家拾取数据包
-typedef struct _STR_PickGoods
+typedef struct _STR_PackPickGoods
 {
+    STR_PackHead head;
     hf_uint32 LootGoodsID; //物品ID
     hf_uint32 GoodsFlag;   //掉落者 怪物ID
-}STR_PickGoods;
+}STR_PackPickGoods;
 
 //19.玩家捡取物品结果数据包
 typedef struct _STR_PickGoodsResult
@@ -929,12 +941,13 @@ typedef struct _STR_PackRoleBasicInfo
 }STR_PackRoleBasicInfo;
 
 //玩家注册数据包
-typedef struct _STR_PlayerRegisterUserId
+typedef struct _STR_PackRegisterUserId
 {
+    STR_PackHead head;
     hf_char userName[32];          //用户名
     hf_char password[32];          //密码
     hf_char Email[32];             //邮箱
-}STR_PlayerRegisterUserId;
+}STR_PackRegisterUserId;
 
 //角色职业属性
 typedef struct _STR_RoleJobAttribute
@@ -952,8 +965,9 @@ typedef struct _STR_RoleJobAttribute
     hf_uint16 Physical_fitness;
 }STR_RoleJobAttribute;
 
-typedef struct _STR_PlayerRegisterRole
+typedef struct _STR_PackRegisterRole
 {
+    STR_PackHead head;
     hf_char   Nick[32];
     hf_uint16 ModeID;        //模型ID
     hf_uint16 SkirtID;       //裙子ID
@@ -965,7 +979,7 @@ typedef struct _STR_PlayerRegisterRole
     hf_uint8  Eye;           //眼睛
     hf_uint8  Hair;          //发型
     hf_uint8  HairColor;     //发色
-}STR_PlayerRegisterRole;
+}STR_PackRegisterRole;
 
 
 
@@ -1024,12 +1038,19 @@ typedef struct _STR_PackFriendOnLine
     hf_uint32 Role;
 }STR_PackFriendOnLine;
 
-//玩家登录数据包
 typedef struct _STR_PlayerLoginUserId
 {
     hf_char userName[32];
     hf_char password[32];
 }STR_PlayerLoginUserId;
+
+//玩家登录数据包
+typedef struct _STR_PackLoginUserId
+{
+    STR_PackHead head;
+    hf_char userName[32];
+    hf_char password[32];
+}STR_PackLoginUserId;
 
 //玩家复活  test
 typedef struct _STR_PlayerRelive
@@ -1174,11 +1195,18 @@ typedef struct _AskTaskData
     hf_uint16 Flag;
 }AskTaskData;
 
-typedef struct _STR_AskTaskExeDlg
+//typedef struct _STR_AskTaskExeDlg
+//{
+//    hf_uint32 TaskID;
+//    hf_uint32 AimID;
+//}STR_AskTaskExeDlg;
+
+typedef struct _STR_PackAskTaskExeDlg
 {
+    STR_PackHead head;
     hf_uint32 TaskID;
     hf_uint32 AimID;
-}STR_AskTaskExeDlg;
+}STR_PackAskTaskExeDlg;
 
 typedef struct _RoleNick
 {

@@ -1,4 +1,4 @@
-#include<iostream>
+﻿#include<iostream>
 
 #include "./../hf_types.h"
 #include "./../server.h"
@@ -43,18 +43,14 @@ void TCPServer::CallBack_Accept(TCPConnection::Pointer conn, const boost::system
     if ( ! ec)
     {
         Logger::GetLogger()->Debug("Client Connected");
-//        int fd = conn->socket().native_handle();
-//        if(setSockKeepAlive(fd))
-//        {
-//            Logger::GetLogger()->Debug("set xintiao success,%d",fd);
-//        }
-//        else
-//        {
-//            Logger::GetLogger()->Debug("set xintiao error,%d",fd);
-//        }
-
-        //set nodelay option
         boost::asio::ip::tcp::no_delay  nodelay(true);
+        boost::asio::socket_base::non_blocking_io none_block(true);
+        conn->socket().io_control(none_block);
+        if ( conn->socket().non_blocking() ){
+            Logger::GetLogger()->Debug("None_Block");
+        }else{
+            Logger::GetLogger()->Debug("Block Socket");
+        }
         conn->socket().set_option(nodelay);
 
         conn->Start();
@@ -62,7 +58,6 @@ void TCPServer::CallBack_Accept(TCPConnection::Pointer conn, const boost::system
     }
     else
     {
-        printf("kehuduanlianjie yichang\n");
         Logger::GetLogger()->Error("error:%d",ec.value());
     }
     StartListen();

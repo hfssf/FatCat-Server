@@ -605,6 +605,10 @@ void Monster::SendMonsterToViewRole(STR_MonsterBasicInfo* monster)
 //    }
     for(_umap_viewRole::iterator it = t_viewRole->begin(); it != t_viewRole->end(); it++)
     {
+        if(it->first < 100000000)
+        {
+            printf("monster vier roleid not find %u\n",it->first);
+        }
         _umap_roleSock::iterator iter = t_roleSock->find(it->first);
         if(iter != t_roleSock->end())
         {

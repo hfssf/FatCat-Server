@@ -39,15 +39,8 @@ int main()
 //    file.ReadFile ("/home/hf02/桌面/heightmap.raw", MAP1);
 //    file.ReadFile("/home/hf02/桌面/aaaaaaaaaaaaaa", MAP2);
 
-//    log4c::GetLog4c()->log_open("mycat");
-//    LOG_TRACE("trace");
-//    LOG_ERROR("error");
-//    LOG_WARN("warn");
-//    LOG_NOTICE("notice");
-//    LOG_DEBUG("hello log4c!");
-
     //数据库初始化
-     Logger::GetLogger()->log_open("mycat");
+//     Logger::GetLogger()->log_open("mycat");
      Logger::GetLogger()->Info("Init DB ........");
      Server::GetInstance()->InitDB();
      Logger::GetLogger()->Debug("Init DB Finished!");

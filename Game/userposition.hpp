@@ -75,9 +75,9 @@ public:
             startPos->Pos_x = pos->Pos_x;
             startPos->Pos_x = pos->Pos_x;
             startPos->Pos_x = pos->Pos_x;
-            //刷新新看到的怪和离开可视范围的怪
+//            //刷新新看到的怪和离开可视范围的怪
             Server::GetInstance()->GetMonster()->PushViewMonsters(conn);
-            //刷新新看到的玩家和离开可视范围的的玩家
+//            //刷新新看到的玩家和离开可视范围的的玩家
             Server::GetInstance()->GetPlayerLogin()->SendViewRole(conn);
         }
         Server::GetInstance()->free(pos);

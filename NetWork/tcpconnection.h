@@ -1,4 +1,4 @@
-﻿#ifndef TCPCONNECTION_H
+#ifndef TCPCONNECTION_H
 #define TCPCONNECTION_H
 
 
@@ -18,7 +18,7 @@ using namespace hf_types;
 
 typedef struct _STR_Package
 {
-    char data[TCP_BUFFER_SIZE];
+    char data[TCP_BUFFER_SIZE-4];
     unsigned int roleid;
 }STR_Package;
 
@@ -88,8 +88,8 @@ public:
     }
 
     void ChangePlayerLoginStatus(hf_uint8 status)
-    {        
-        m_LoginStatus = status;        
+    {
+        m_LoginStatus = status;
     }
     void LockLoginStatus()
     {
@@ -100,14 +100,15 @@ public:
         m_LoginStatusMtx.unlock();
     }
 
-    void LockSessionMtx()
+    void setSaveStatus( const bool b)
     {
-        m_SessionMtx.lock();
+        _isSaved = b;
     }
-    void UnLockSessionMtx()
+    bool isSaved() const
     {
-        m_SessionMtx.unlock();
+        return _isSaved;
     }
+
 
     boost::mutex          m_write_lock;
     boost::mutex          m_read_lock;
@@ -115,6 +116,8 @@ public:
 protected:
     void  _push( void *buff, int size);
     void  _write();
+
+    void  _clear_queue(boost::lockfree::queue<_Buffer> &queue);
 private:
     hf_uint16 m_dataPos;   //接收到或者未处理的数据在m_buf里的位置
     hf_char                 m_buf[TCP_BUFFER_SIZE];
@@ -127,9 +130,7 @@ private:
     //发送缓冲区
     hf_char                 m_send_buf[TCP_BUFFER_SIZE];
     hf_uint8                m_LoginStatus;  //0表示未登录用户，1表示已经登录用户，未登录角色， 2表示已经登录角色
-//    boost::shared_mutex     m_LoginStatusMtx;
     boost::mutex            m_LoginStatusMtx;
-    boost::shared_mutex     m_SessionMtx;
     int                     m_write_len;
 
     boost::asio::io_service::strand m_strand;
@@ -138,8 +139,16 @@ private:
     //一旦发生异常，及时将锁释放，否则会造成死锁
     //
     boost::lockfree::queue<_Buffer>     m_queue;
-    bool                                _isWriting;
+    boost::atomic_bool                  _isWriting;
+    boost::atomic_bool                  _isClosed;
+    boost::atomic_bool                  _isSaved;
+    boost::atomic_uint32_t              _push_times;
+    boost::atomic_uint32_t              _pop_times;
 
+    int     getSendQueueLength() const
+    {
+        return _push_times - _pop_times;
+    }
 
 };
 

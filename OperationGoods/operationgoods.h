@@ -13,7 +13,7 @@ public:
 
 
     //捡物品
-    void PickUpGoods(TCPConnection::Pointer conn, STR_PickGoods* t_pickGoods);
+    void PickUpGoods(TCPConnection::Pointer conn, STR_PackPickGoods* t_pickGoods);
 
     void PickUpMoney(TCPConnection::Pointer conn, STR_LootGoods* lootGoods, hf_uint32 dropID);
     hf_uint8 PickUpEqu(TCPConnection::Pointer conn, STR_LootGoods* lootGoods, hf_uint32 dropID);
@@ -28,19 +28,19 @@ public:
     //查询材料属性
 
     //丢弃物品
-    void RemoveBagGoods(TCPConnection::Pointer conn, STR_RemoveBagGoods* removeGoods);
+    void RemoveBagGoods(TCPConnection::Pointer conn, STR_PackRemoveBagGoods* removeGoods);
     //移动或分割物品
-    void MoveBagGoods(TCPConnection::Pointer conn, STR_MoveBagGoods* moveGoods);
+    void MoveBagGoods(TCPConnection::Pointer conn, STR_PackMoveBagGoods* moveGoods);
     //交换物品
-    void ExchangeBagGoods(TCPConnection::Pointer conn, STR_MoveBagGoods* moveGoods);
+    void ExchangeBagGoods(TCPConnection::Pointer conn, STR_PackMoveBagGoods* moveGoods);
     //购买物品
-    void BuyGoods(TCPConnection::Pointer conn, STR_BuyGoods* buyGoods);
+    void BuyGoods(TCPConnection::Pointer conn, STR_PackBuyGoods* buyGoods);
     //购买装备
-    void BuyEquipment(TCPConnection::Pointer conn, STR_BuyGoods* buyGoods, STR_PlayerMoney* money, hf_uint32 price);
+    void BuyEquipment(TCPConnection::Pointer conn, STR_PackBuyGoods* buyGoods, STR_PlayerMoney* money, hf_uint32 price);
     //购买其他物品
-    void BuyOtherGoods(TCPConnection::Pointer conn, STR_BuyGoods* buyGoods, STR_PlayerMoney* money, hf_uint32 price);
+    void BuyOtherGoods(TCPConnection::Pointer conn, STR_PackBuyGoods* buyGoods, STR_PlayerMoney* money, hf_uint32 price);
     //出售物品
-    void SellGoods(TCPConnection::Pointer conn, STR_SellGoods* moveGoods);
+    void SellGoods(TCPConnection::Pointer conn, STR_PackSellGoods* moveGoods);
     //得到新的装备编号
 
     //得到玩家背包中某种/某类物品的数量

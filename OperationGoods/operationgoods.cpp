@@ -271,7 +271,7 @@ hf_uint8 OperationGoods::PickUpcommonGoods(TCPConnection::Pointer conn, STR_Loot
 }
 
 //捡物品
-void OperationGoods::PickUpGoods(TCPConnection::Pointer conn, STR_PickGoods* pickGoods)
+void OperationGoods::PickUpGoods(TCPConnection::Pointer conn, STR_PackPickGoods* pickGoods)
 {
     SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
     if((*(*smap)[conn].m_interchage).isInchange == true) //处于交易状态
@@ -450,7 +450,7 @@ void OperationGoods::QueryEquAttr()
 }
 
 //丢弃物品
-void OperationGoods::RemoveBagGoods(TCPConnection::Pointer conn, STR_RemoveBagGoods* removeGoods)
+void OperationGoods::RemoveBagGoods(TCPConnection::Pointer conn, STR_PackRemoveBagGoods* removeGoods)
 {
     SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
 
@@ -515,7 +515,7 @@ void OperationGoods::RemoveBagGoods(TCPConnection::Pointer conn, STR_RemoveBagGo
 }
 
 //移动或分割物品
-void OperationGoods::MoveBagGoods(TCPConnection::Pointer conn, STR_MoveBagGoods* moveGoods)
+void OperationGoods::MoveBagGoods(TCPConnection::Pointer conn, STR_PackMoveBagGoods* moveGoods)
 {
     if(moveGoods->CurrentPos == moveGoods->TargetPos)
     {
@@ -642,7 +642,7 @@ void OperationGoods::MoveBagGoods(TCPConnection::Pointer conn, STR_MoveBagGoods*
 
 
 //交换物品
-void OperationGoods::ExchangeBagGoods(TCPConnection::Pointer conn, STR_MoveBagGoods* moveGoods)
+void OperationGoods::ExchangeBagGoods(TCPConnection::Pointer conn, STR_PackMoveBagGoods* moveGoods)
 {
     SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
     umap_roleGoods  playerBagGoods = (*smap)[conn].m_playerGoods;
@@ -737,7 +737,7 @@ void OperationGoods::ExchangeBagGoods(TCPConnection::Pointer conn, STR_MoveBagGo
 }
 
 //购买物品
-void OperationGoods::BuyGoods(TCPConnection::Pointer conn, STR_BuyGoods* buyGoods)
+void OperationGoods::BuyGoods(TCPConnection::Pointer conn, STR_PackBuyGoods* buyGoods)
 {
     SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
     if((*(*smap)[conn].m_interchage).isInchange == true)
@@ -781,7 +781,7 @@ void OperationGoods::BuyGoods(TCPConnection::Pointer conn, STR_BuyGoods* buyGood
 }
 
 //出售物品
-void OperationGoods::SellGoods(TCPConnection::Pointer conn, STR_SellGoods* sellGoods)
+void OperationGoods::SellGoods(TCPConnection::Pointer conn, STR_PackSellGoods* sellGoods)
 {
     SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
     if((*(*smap)[conn].m_interchage).isInchange == true)
@@ -925,7 +925,7 @@ void OperationGoods::SetEquAttr(STR_EquipmentAttr* equAttr, hf_uint32 typeID)
 }
 
 //购买装备
-void OperationGoods::BuyEquipment(TCPConnection::Pointer conn, STR_BuyGoods* buyGoods, STR_PlayerMoney* money, hf_uint32 price)
+void OperationGoods::BuyEquipment(TCPConnection::Pointer conn, STR_PackBuyGoods* buyGoods, STR_PlayerMoney* money, hf_uint32 price)
 {
     SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
     STR_PackOtherResult t_result;
@@ -987,7 +987,7 @@ void OperationGoods::BuyEquipment(TCPConnection::Pointer conn, STR_BuyGoods* buy
 }
 
 //购买其他物品
-void OperationGoods::BuyOtherGoods(TCPConnection::Pointer conn, STR_BuyGoods* buyGoods, STR_PlayerMoney* money, hf_uint32 price)
+void OperationGoods::BuyOtherGoods(TCPConnection::Pointer conn, STR_PackBuyGoods* buyGoods, STR_PlayerMoney* money, hf_uint32 price)
 {
     SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
     hf_uint16 emptyPosCount = OperationGoods::GetEmptyPosCount(conn);

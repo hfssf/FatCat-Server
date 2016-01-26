@@ -1,4 +1,4 @@
-﻿#include "./../server.h"
+#include "./../server.h"
 #include "./../Game/postgresqlstruct.h"
 #include "./../PlayerLogin/playerlogin.h"
 #include "./../Game/cmdparse.h"
@@ -8,10 +8,14 @@
 
 TCPConnection::TCPConnection(boost::asio::io_service &io)
     :m_socket(io),m_dataPos(0),m_LoginStatus(PlayerNotLoginUser),m_strand(io),
-      m_queue(100)
+      m_queue(1024)
 {
     Logger::GetLogger()->Debug("Create New Client TCPConnection");
     _isWriting = false;
+    _isClosed = false;
+    _isSaved = false;
+    _push_times = 0;
+    _pop_times = 0;
 }
 
 TCPConnection::~TCPConnection()
@@ -25,12 +29,36 @@ void TCPConnection::Start()
     ReadSome();
 }
 
+void TCPConnection::_clear_queue(boost::lockfree::queue<_Buffer> &queue)
+{
+    _Buffer buf;
+    while( queue.pop(buf) );
+}
+
 void TCPConnection::_push(void *buff, int size)
 {
+    size_t tms = 0;
     _Buffer _buf;
     memcpy(_buf.buf,buff,size);
     _buf.sz = size;
+
+//    Logger::GetLogger()->Debug("Send Queue Length:%d",getSendQueueLength());
+    while(getSendQueueLength() > 100)
+    {
+//        printf("send Queue length   %u\n", getSendQueueLength());
+//        Logger::GetLogger()->Debug("Send Queue Length:%d",getSendQueueLength());
+        usleep(1000);
+        tms++;
+        if(tms >= 1000)
+        {
+            break;
+        }
+    }
+//    printf("send Queue length   %u\n", getSendQueueLength());
     m_queue.push(_buf);
+    _push_times+=1;
+
+//    Logger::GetLogger()->Debug("Send Queue Length:%d",getSendQueueLength());
     if(!_isWriting)
     {
         _write();
@@ -40,25 +68,73 @@ void TCPConnection::_write()
 {
     if (m_queue.empty()){
         _isWriting = false;
+        _push_times = 0;
+        _pop_times = 0;
         return;
     }
 
     _Buffer buf;
+
     m_queue.pop(buf);
+    _pop_times += 1;
 
     _isWriting = true;
-    boost::asio::async_write(m_socket,boost::asio::buffer((char*)buf.buf,buf.sz),boost::asio::transfer_exactly(buf.sz),
+
+    boost::asio::async_write(m_socket,boost::asio::buffer((char*)buf.buf,buf.sz),
+                             boost::asio::transfer_exactly(buf.sz),
                              m_strand.wrap(
                              boost::bind(
                              &TCPConnection::CallBack_Write,shared_from_this(),boost::asio::placeholders::error(),
                              boost::asio::placeholders::bytes_transferred()
                              ))
                              );
-//    _isWriting = true;
-}
 
+}
+void TCPConnection::CallBack_Write(const boost::system::error_code &code, hf_uint16 transfferd)
+{
+    if ( code ||  transfferd == 0 )
+      {
+        Logger::GetLogger()->Debug("Send Data to Player Error,Maybe socket closed!");
+        _isWriting = false;
+        return;
+      }
+    _Buffer _buf;
+    if ( m_queue.empty() )
+    {
+        _isWriting = false;
+        _push_times = 0;
+        _pop_times = 0;
+        return;
+    }
+    if (!m_queue.pop(_buf))
+    {
+        _isWriting = false;
+        return;
+    }
+    _pop_times += 1;
+
+        memcpy(m_send_buf,_buf.buf,_buf.sz);
+
+        boost::asio::async_write( m_socket,boost::asio::buffer((char*)m_send_buf,_buf.sz),
+                                  boost::asio::transfer_exactly(_buf.sz),
+                                  m_strand.wrap(
+                                  boost::bind(
+                                  &TCPConnection::CallBack_Write,shared_from_this(),boost::asio::placeholders::error(),
+                                  boost::asio::placeholders::bytes_transferred()
+                                  ))
+                                );
+}
 int TCPConnection::Write_all(void *buff, int size)
 {
+    //if socket is closed , stop send data
+    if ( _isClosed )
+    {
+        //clear the queue
+        _clear_queue( m_queue );
+        _push_times = 0;
+        _pop_times = 0;
+        return 0;
+    }
     if(size >= CHUNK_SIZE)  //test
     {
         STR_PackHead t_packHead;
@@ -67,33 +143,7 @@ int TCPConnection::Write_all(void *buff, int size)
         return 0;
     }
     _push(buff,size);
-    //m_strand.post(boost::bind(&TCPConnection::_push,shared_from_this(),buff,size));
 
-
-    //Logger::GetLogger()->Debug("Request the lock");
-    //m_w_lock.timed_lock(boost::posix_time::millisec(1000));
-    //m_w_lock.lock();
-    //Logger::GetLogger()->Debug("Send buffer Len:%d",size);
-
-    //将要发送的数据拷贝至发送缓冲区，防止数据丢失
-//    memcpy(m_send_buf,buff,size);
-//    m_write_len = size;
-
-//    boost::asio::async_write( m_socket,boost::asio::buffer((char*)m_send_buf,m_write_len),
-//                              boost::asio::transfer_exactly(m_write_len),
-//                              m_strand.wrap(
-//                              boost::bind(
-//                              &TCPConnection::CallBack_Write,shared_from_this(),boost::asio::placeholders::error(),
-//                              boost::asio::placeholders::bytes_transferred()
-//                              ))
-//                            );
-
-//    m_socket.async_write_some(
-//                              boost::asio::buffer(m_send_buf,m_write_len),
-//                              boost::bind(
-//                              &TCPConnection::CallBack_Write,shared_from_this(),boost::asio::placeholders::error(),
-//                                                           boost::asio::placeholders::bytes_transferred())
-//                              );
     return 0;
 }
 
@@ -113,8 +163,6 @@ void TCPConnection::CallBack_Read_Some(const boost::system::error_code &ec, hf_u
 {
     if ( !ec )
     {
-//        Logger::GetLogger()->Debug("size:%u",size);
-
         m_dataPos += size;
         hf_uint16 currentPos = 0;
         STR_PackHead head;
@@ -166,11 +214,12 @@ void TCPConnection::CallBack_Read_Some(const boost::system::error_code &ec, hf_u
             }
             else //不够一个包的长度
             {
-                Logger::GetLogger()->Debug("you wei jie xi de bao currentPos:%u,m_dataPos:%u,head.len:%u,head.flag:%u",currentPos,m_dataPos,head.Len, head.Flag);
+//                Logger::GetLogger()->Debug("you wei jie xi de bao currentPos:%u,m_dataPos:%u,head.len:%u,head.flag:%u",currentPos,m_dataPos,head.Len, head.Flag);
                 hf_char buff[TCP_BUFFER_SIZE] = { 0 };
                 memcpy(buff, m_buf + currentPos, m_dataPos - currentPos);
                 memcpy(m_buf, buff, TCP_BUFFER_SIZE);
                 m_dataPos -= currentPos;
+
                 break;
             }
         }
@@ -178,69 +227,15 @@ void TCPConnection::CallBack_Read_Some(const boost::system::error_code &ec, hf_u
       }
     else if ( size == 0 || ec == boost::asio::error::eof || ec == boost::asio::error::shut_down)
     {
-        Logger::GetLogger()->Debug("Client head Disconnected");
+        _isClosed = true;
+        Logger::GetLogger()->Debug("Client Disconnected,Socket_t:%d",m_socket.native());
         Server::GetInstance()->GetPlayerLogin()->SavePlayerOfflineData(shared_from_this());
         m_socket.close();
     }
 }
 
 
-void TCPConnection::CallBack_Write(const boost::system::error_code &code, hf_uint16 transfferd)
-{
-    //m_write_lock.unlock();
-//    m_w_lock.unlock();
-//    Logger::GetLogger()->Debug("Indeed Sent Len:%d",transfferd);
 
-    if ( code ||  transfferd == 0 )
-      {
-        Logger::GetLogger()->Debug("Send Data to Player Error");
-        Server::GetInstance()->GetPlayerLogin()->SavePlayerOfflineData(shared_from_this() );
-        m_socket.close();
-        _isWriting = false;
-        return;
-      }
-    _Buffer _buf;
-    if ( m_queue.empty() )
-    {
-        _isWriting = false;
-        return;
-    }
-    while (!m_queue.pop(_buf)) {
-
-    }
-
-        memcpy(m_send_buf,_buf.buf,_buf.sz);
-        m_write_len = _buf.sz;
-        boost::asio::async_write( m_socket,boost::asio::buffer((char*)m_send_buf,m_write_len),
-                                  boost::asio::transfer_exactly(m_write_len),
-                                  m_strand.wrap(
-                                  boost::bind(
-                                  &TCPConnection::CallBack_Write,shared_from_this(),boost::asio::placeholders::error(),
-                                  boost::asio::placeholders::bytes_transferred()
-                                  ))
-                                );
-/*
-    if ( transfferd == m_write_len)
-    {
-        Logger::GetLogger()->Debug("All Data In Buffer Sent");
-        m_write_lock.unlock();
-    }
-    else //Send Not Complete yet
-    {
-
-        m_write_len -= transfferd;
-        Logger::GetLogger()->Debug("Continue Send , left:%d",m_write_len);
-        memcpy(m_send_buf,m_send_buf+transfferd,m_write_len);
-        m_socket.async_write_some(boost::asio::buffer((char*)(m_send_buf),m_write_len),
-                                  boost::bind(
-                                  &TCPConnection::CallBack_Write,shared_from_this(),boost::asio::placeholders::error(),
-                                  boost::asio::placeholders::bytes_transferred()
-                                  )
-                                );
-    }
-
-*/
-}
 
 //判断玩家是否登录角色
 hf_uint8 TCPConnection::JudgePlayerLogin(hf_uint8 flag)
@@ -264,5 +259,4 @@ hf_uint8 TCPConnection::JudgePlayerLogin(hf_uint8 flag)
         return 2;
     }
 }
-
 

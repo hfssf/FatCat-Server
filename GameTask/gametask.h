@@ -20,7 +20,7 @@ public:
      //放弃任务
      void QuitTask(TCPConnection::Pointer conn, hf_uint32 taskid);
      //请求完成任务
-     void AskFinishTask(TCPConnection::Pointer conn, STR_FinishTask* finishTask);
+     void AskFinishTask(TCPConnection::Pointer conn, STR_PackFinishTask* finishTask);
      //请求任务对话
      void StartTaskDlg(TCPConnection::Pointer conn, hf_uint32 taskid);
      //请求任务结束对话
@@ -32,9 +32,9 @@ public:
      //请求任务奖励
      void TaskReward(TCPConnection::Pointer conn, hf_uint32 taskid);
      //请求任务执行对话
-     void AskTaskExeDialog(TCPConnection::Pointer conn, STR_AskTaskExeDlg* exeDlg);
+     void AskTaskExeDialog(TCPConnection::Pointer conn, STR_PackAskTaskExeDlg* exeDlg);
      //任务执行对话完成
-     void TaskExeDialogFinish(TCPConnection::Pointer conn, STR_AskTaskExeDlg* exeDlg);
+     void TaskExeDialogFinish(TCPConnection::Pointer conn, STR_PackAskTaskExeDlg* exeDlg);
 
 
     void FinishCollectGoodsTask(TCPConnection::Pointer conn, STR_TaskProcess* taskProcess);  //完成收集物品任务
@@ -49,9 +49,9 @@ public:
     void AddGoodsTask(umap_taskGoods taskGoods, hf_uint32 GoodsID, hf_uint32 taskID);
 
     //任务完成物品奖励
-    bool TaskFinishGoodsReward(TCPConnection::Pointer conn, STR_FinishTask* finishTask);
+    bool TaskFinishGoodsReward(TCPConnection::Pointer conn, STR_PackFinishTask* finishTask);
     //任务完成任务奖励
-    void TaskFinishTaskReward(TCPConnection::Pointer conn, STR_FinishTask* finishTask);
+    void TaskFinishTaskReward(TCPConnection::Pointer conn, STR_PackFinishTask* finishTask);
 
 
      //发送已接取的任务进度

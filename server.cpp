@@ -28,7 +28,7 @@ Server::Server() :
     m_MemDB(new MemDBManager),
     m_DiskDB(new DiskDBManager),
     m_task_pool(ThreadCount),
-    m_cmdparse_pool(CORE_NUM),
+    m_pack_pool(10),
     m_memory_factory(CHUNK_SIZE,CHUNK_COUNT),
     m_monster( new Monster()),
     m_playerLogin( new PlayerLogin),
@@ -42,8 +42,8 @@ Server::Server() :
     m_gameChat(new GameChat),
     m_package(new boost::lockfree::queue<STR_Package>(PackageCount))
 {
-    push_num = 0;
-    pop_num = 0;
+    _pop_times = 0;
+    _push_times = 0;
 }
 
 Server::~Server()
@@ -85,18 +85,20 @@ void Server::InitDB()
 //        Logger::GetLogger()->Debug("Connect postgres error");
 //   }
 
-   if(!m_DiskDB->Connect())
-   {
-       Logger::GetLogger()->Debug("Connect postgres error");
-   }
 //   if(!m_MemDB->Connect(MemCon))
 //   {
 //       Logger::GetLogger()->Debug("Connect redis errorr");
 //   }
+
+   if(!m_DiskDB->Connect())
+   {
+       Logger::GetLogger()->Debug("Connect postgres error");
+   }
    if(!m_MemDB->Connect())
    {
        Logger::GetLogger()->Debug("Connect redis errorr");
    }
+
 
    m_monster->CreateMonster();
    m_monster->QueryMonsterLoot();
@@ -115,19 +117,18 @@ void Server::InitDB()
    Monster* t_monster = srv->GetMonster();
    OperationPostgres* t_opePost = srv->GetOperationPostgres();
 
-   srv->RunCmdparse(boost::bind(&Server::PopPackage, srv));
-//   srv->RunCmdparse(boost::bind(&Server::PopPackage, srv));
+   srv->RunTask(boost::bind(&Server::PopPackage, srv));
 //   srv->RunTask(boost::bind(&Server::PopPackage, srv));
-//   srv->RunTask(boost::bind(&Server::PopPackage, srv));
+
 
    srv->RunTask(boost::bind(&Monster::Monsteractivity, t_monster));
    //技能伤害线程
    srv->RunTask(boost::bind(&GameAttack::RoleSkillAttack, t_attack));
    //删除过了时间的掉落物品
    srv->RunTask(boost::bind(&GameAttack::DeleteOverTimeGoods, t_attack));
-   //将用户数据更新进redis
+   //将玩家的数据更新进redis
    srv->RunTask(boost::bind(&OperationPostgres::UpdateRedisData, t_opePost));
-   //将用户数据更新进数据库
+   //将玩家的数据更新进数据库
 //   srv->RunTask(boost::bind(&OperationPostgres::UpdatePostgresData, t_opePost));
 }
 
@@ -140,10 +141,11 @@ void Server::InitListen()
 
     TCPServer netsrv(io);
     netsrv.Start();
-    boost::thread_group group;
-    group.create_thread(boost::bind(& boost::asio::io_service::run, &io));
-    group.create_thread(boost::bind(& boost::asio::io_service::run, &io));
-    group.join_all();
+    io.run();
+//    boost::thread_group group;
+//    group.create_thread(boost::bind(& boost::asio::io_service::run, &io));
+//    group.create_thread(boost::bind(& boost::asio::io_service::run, &io));
+//    group.join_all();
 }
 
 
@@ -158,30 +160,44 @@ Server* Server::GetInstance()
 }
 
 void Server::PopPackage()
-{
-    STR_Package pack;
+{    
+    STR_Package t_pack;
     Server* srv = Server::GetInstance();
     umap_roleSock t_roleSock = SessionMgr::Instance()->GetRoleSock();
     while(1)
     {
-        if(m_package->pop(pack))
+//        uint16_t t = 0;
+//        while (getCmdparseQueueLength() > 50)
+//        {
+//            usleep(1000);
+//            t++;
+////            Logger::GetLogger()->Debug("pop success but not cmdparse length:%d",getCmdparseQueueLength());
+//            if ( t > 1000 )
+//            {
+//                Logger::GetLogger()->Debug("pop success but not cmdparse length:%d",getCmdparseQueueLength());
+//                break;
+//            }
+//        }
+        if(m_package->pop(t_pack))
         {
-            pop_num++;
-            TCPConnection::Pointer conn = (*t_roleSock)[pack.roleid];
+            _pop_times += 1;
+            TCPConnection::Pointer conn = (*t_roleSock)[t_pack.roleid];
             if(conn == NULL)
             {
+                usleep(1);
                 continue;
             }
             else
             {
-//                srv->RunCmdparse(boost::bind(&CommandParse, conn, pack.data));
-                CommandParse(conn, pack.data);
+//                CommandParse(conn, pack->data);
+                hf_char* pack = (hf_char*)srv->malloc();
+                memcpy(pack, t_pack.data, sizeof(t_pack.data));
+                RunPackTask(boost::bind(&CommandParse,conn,pack));
             }
         }
         else
         {
-//            printf("+++++++++++++++queue pop sleep++++++++++++\n");
-            usleep(10);
+            usleep(1);
         }
     }
 }
