@@ -1,7 +1,7 @@
 ﻿#ifndef LOG_H
 #define LOG_H
 
-#include "log/HFLogger.hpp"
+#include "./../log/HFLogger.hpp"
 class Logger
 {
 public:

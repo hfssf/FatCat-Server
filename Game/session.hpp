@@ -327,7 +327,7 @@ public:
     void SessionsNameErase(TCPConnection::Pointer conn)
     {
         m_sessNameMtx.lock();
-        printf("erase username=%s\n",(*m_sessions)[conn].m_usrid);
+//        printf("erase username=%s\n",(*m_sessions)[conn].m_usrid);
         m_nameSock->erase((*m_sessions)[conn].m_usrid);
         Logger::GetLogger()->Debug("m_nameSock delete end:%d", m_nameSock->size());
 

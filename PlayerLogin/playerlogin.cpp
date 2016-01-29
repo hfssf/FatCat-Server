@@ -1157,7 +1157,7 @@ void PlayerLogin::UpdatePlayerExp(UpdateExp* upExp)
 void PlayerLogin::UpdatePlayerGoods(hf_uint32 roleid, STR_Goods* upGoods)
 {
     StringBuilder sbd;
-    sbd << "update t_playergoods set count = " << upGoods->Count << " where roleid = " << roleid << " and position = " << upGoods->Position << ";";
+    sbd << "update t_playergoods set goodsid = " << upGoods->GoodsID << ",typeid = " << upGoods->TypeID << ",count = " << upGoods->Count << " where roleid = " << roleid << " and position = " << upGoods->Position << ";";
      Logger::GetLogger()->Debug(sbd.str());
      hf_int32 t_value = Server::GetInstance()->getDiskDB()->Set(sbd.str());
     if(t_value == -1)

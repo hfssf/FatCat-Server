@@ -31,8 +31,19 @@ public:
     void RemoveBagGoods(TCPConnection::Pointer conn, STR_PackRemoveBagGoods* removeGoods);
     //移动或分割物品
     void MoveBagGoods(TCPConnection::Pointer conn, STR_PackMoveBagGoods* moveGoods);
+    //移动或分割物品到空格子
+    void MoveBagGoodsToEmptyPos(TCPConnection::Pointer conn, STR_PackMoveBagGoods* moveGoods);
+    //背包两个装备交换位置
+    void ExchangeBagEqu(TCPConnection::Pointer conn, STR_PackMoveBagGoods* moveGoods);
+    //背包装备和普通物品交换位置
+    void ExchangeBagEquAndCommonGoods(TCPConnection::Pointer conn, STR_PackMoveBagGoods* moveGoods);
+    //移动背包两个位置上的同一普通物品
+    void MoveBagCommonGoods(TCPConnection::Pointer conn, STR_PackMoveBagGoods* moveGoods);
+    //交换背包两个位置上的不同普通物品
+    void ExchangeBagCommonGoods(TCPConnection::Pointer conn, STR_PackMoveBagGoods* moveGoods);
     //交换物品
-    void ExchangeBagGoods(TCPConnection::Pointer conn, STR_PackMoveBagGoods* moveGoods);
+//    void ExchangeBagGoods(TCPConnection::Pointer conn, STR_PackMoveBagGoods* moveGoods);
+
     //购买物品
     void BuyGoods(TCPConnection::Pointer conn, STR_PackBuyGoods* buyGoods);
     //购买装备

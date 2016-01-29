@@ -5,7 +5,7 @@
 
 #include "memdbmanager.h"
 #include "diskdbmanager.h"
-#include "server.h"
+#include "./../server.h"
 
 MemDBManager::MemDBManager()
 {
