@@ -27,6 +27,7 @@
 
 #define FLAG_Chat                    121      //聊天
 
+#define FLAG_TIME                    122    //服务器时间
 #define FLAG_BagGoods                130    //玩家新捡的物品
 #define FLAG_PlayerMoney             131    //玩家金币
 #define FLAG_EquGoodsAttr            132    //装备属性

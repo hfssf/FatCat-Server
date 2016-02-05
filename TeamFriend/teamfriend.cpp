@@ -222,7 +222,7 @@ void TeamFriend::ReciveAddFriend(TCPConnection::Pointer conn, STR_PackAddFriendR
      hf_int32 t_row = srv->getDiskDB()->GetAskAddFriend(addFriend, sbd.str());
      if(t_row > 0)
      {
-         hf_char* buff = (hf_char*)srv->malloc();
+         hf_char buff[1024] = { 0 };
          STR_PackHead t_packHead;
          t_packHead.Flag = FLAG_AddFriend;
          t_packHead.Len = t_row*sizeof(STR_AddFriend);
@@ -231,11 +231,20 @@ void TeamFriend::ReciveAddFriend(TCPConnection::Pointer conn, STR_PackAddFriendR
          {
              memcpy(buff + sizeof(STR_PackHead) + i*sizeof(STR_AddFriend),&(*it), sizeof(STR_AddFriend));
              i++;
+             if(i == (1024 - sizeof(STR_PackHead))/sizeof(STR_AddFriend) + 1)
+             {
+                 t_packHead.Len = sizeof(STR_AddFriend) * i;
+                 memcpy(buff, &t_packHead, sizeof(STR_PackHead));
+                 conn->Write_all(buff, t_packHead.Len + sizeof(STR_PackHead));
+                 i = 0;
+             }
          }
-         memcpy(buff, &t_packHead, sizeof(STR_PackHead));
-         conn->Write_all(buff,t_packHead.Len + sizeof(STR_PackHead));
-
-         srv->free(buff);
+         if(i != 0)
+         {
+             t_packHead.Len = sizeof(STR_AddFriend) * i;
+             memcpy(buff, &t_packHead, sizeof(STR_PackHead));
+             conn->Write_all(buff,t_packHead.Len + sizeof(STR_PackHead));
+         }
 
          //删除保存的离线添加请求
          sbd.Clear();

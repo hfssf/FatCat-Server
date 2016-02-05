@@ -167,7 +167,7 @@ public:
      hf_int32 GetPlayerEqu(umap_roleEqu playerEqu, const hf_char* str);
 
      //查询玩家未捡取的物品位置
-     hf_int32 GetNotPickGoodsPosition(umap_lootPosition lootPosition, const hf_char* str);
+//     hf_int32 GetNotPickGoodsPosition(umap_lootPosition lootPosition, const hf_char* str);
 
      //查询玩家未捡取的物品
      hf_int32 GetNotPickGoods(umap_lootGoods lootGoods, const hf_char* str);

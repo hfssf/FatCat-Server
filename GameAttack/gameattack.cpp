@@ -8,6 +8,8 @@
 #include "gameattack.h"
 #include "./../server.h"
 #include "./../PlayerLogin/playerlogin.h"
+#include "./../OperationGoods/operationgoods.h"
+
 
 GameAttack::GameAttack()
     :m_attackRole(new _umap_roleAttackAim)
@@ -520,29 +522,37 @@ void GameAttack::MonsterDeath(TCPConnection::Pointer conn, STR_MonsterInfo* mons
         conn->Write_all(t_RoleExp, sizeof(STR_PackRoleExperience));
 //      }
 
+
+    STR_LootGoods t_LootGoods;
+    t_LootGoods.Pos_x = monster->monster.Current_x - 2;
+    t_LootGoods.Pos_y = monster->monster.Current_y + 4;
+    t_LootGoods.Pos_z = monster->monster.Current_z;
+    t_LootGoods.MapID = monster->monster.MapID;
+    time_t timep;
+    time(&timep);
+
+    t_LootGoods.ProtectTime = (hf_uint32)timep + LootProtectTime;
+    t_LootGoods.ProtectStatus = (*smap)[conn].m_roleid;
+    t_LootGoods.ContinueTime = (hf_uint32)timep + LootContinueTime;
+//    umap_lootGoods lootGoods = (*smap)[conn].m_lootGoods;
+    printf("protectTime:%u,    ContinueTime:%u\n",t_LootGoods.ProtectTime, t_LootGoods.ContinueTime);
+    t_LootGoods.Count = GetRewardMoney(monster->monster.Level);;
+
+    //暂时只取奖励的金钱，后面会加一些计算公式，计算后奖励的金钱可能为0
+
+//    Logger::GetLogger()->Debug("monster loot money:monsterid:%u,count:%u",monster->monster.MonsterID, t_packLootGoods.Count);
+    if(t_LootGoods.Count > 0)
+    {
+        t_LootGoods.UniqueID = OperationGoods::GetLootGoodsID();
+        t_LootGoods.TypeID = Money_1;
+        SessionMgr::Instance()->LootGoodsAdd(t_LootGoods);
+//        (*lootGoods)[t_packLootGoods.UniqueID] = t_packLootGoods;
+        SessionMgr::Instance()->SendLootGoods(&t_LootGoods);
+    }
     umap_monsterLoot* t_monsterLoot = Server::GetInstance()->GetMonster()->GetMonsterLoot();
     umap_monsterLoot::iterator iter = t_monsterLoot->find(monster->monster.MonsterTypeID);
     if(iter != t_monsterLoot->end())
     {
-        STR_LootGoods t_lootGoods;
-        hf_char* buff = (hf_char*)srv->malloc();
-        hf_int32 i = 0;
-        umap_lootGoods lootGoods = (*smap)[conn].m_lootGoods;
-
-        t_lootGoods.Count = GetRewardMoney(monster->monster.Level);;
-        //暂时只取奖励的金钱，后面会加一些计算公式，计算后奖励的金钱可能为0
-
-        Logger::GetLogger()->Debug("monster loot money:monsterid:%u,count:%u",monster->monster.MonsterID, t_lootGoods.Count);
-        if(t_lootGoods.Count > 0)
-        {
-            t_lootGoods.LootGoodsID = Money_1;
-            vector<STR_LootGoods> t_vec;
-            t_vec.push_back(t_lootGoods);
-            (*lootGoods)[monster->monster.MonsterID*10] = t_vec;   //掉落者ID *10
-            memcpy(buff + sizeof(STR_PackHead) + sizeof(STR_LootGoodsPos) + i* sizeof(STR_LootGoods), &t_lootGoods, sizeof(STR_LootGoods));
-            i++;
-        }
-
         //可能掉落多个物品，分别判断
         for(vector<STR_MonsterLoot>::iterator vec = iter->second.begin(); vec != iter->second.end(); vec++)
         {
@@ -551,48 +561,32 @@ void GameAttack::MonsterDeath(TCPConnection::Pointer conn, STR_MonsterInfo* mons
             //掉落可能性判断
             if(vec->LootProbability*100 >= rand()%100)
             {
-                t_lootGoods.LootGoodsID = vec->LootGoodsID;
-                t_lootGoods.Count = vec->Count;
-                memcpy(buff + sizeof(STR_PackHead) + sizeof(STR_LootGoodsPos) + i* sizeof(STR_LootGoods), &t_lootGoods, sizeof(STR_LootGoods));
-                Logger::GetLogger()->Debug("loot goodsid:%u,count:%u\n",t_lootGoods.LootGoodsID, t_lootGoods.Count);
-                i++;
-
-                _umap_lootGoods::iterator it = lootGoods->find(monster->monster.MonsterID*10); //保存掉落物品
-                if(it != lootGoods->end())
+                t_LootGoods.UniqueID = OperationGoods::GetLootGoodsID();
+                if(20001 <= vec->LootGoodsID && vec->LootGoodsID <= 30000)
                 {
-                    it->second.push_back(t_lootGoods);
+                    t_LootGoods.GoodsID = OperationGoods::GetEquipmentID();
                 }
                 else
                 {
-                    vector<STR_LootGoods> t_vec;
-                    t_vec.push_back(t_lootGoods);
-                    (*lootGoods)[monster->monster.MonsterID*10] = t_vec;
+                    t_LootGoods.GoodsID = vec->LootGoodsID;
                 }
+                t_LootGoods.TypeID = vec->LootGoodsID;
+                t_LootGoods.Count = vec->Count;
+//                (*lootGoods)[t_packLootGoods.UniqueID] = t_packLootGoods;
+                t_LootGoods.Pos_x += 5;
+                SessionMgr::Instance()->LootGoodsAdd(t_LootGoods);
+                SessionMgr::Instance()->SendLootGoods(&t_LootGoods);
             }
         }                
 
-        STR_PackHead t_packHead;
-        t_packHead.Flag = FLAG_LootGoods;
-        t_packHead.Len = sizeof(STR_LootGoodsPos) + i*sizeof(STR_LootGoods);
-        STR_LootGoodsPos t_PacklootGoods;
-        t_PacklootGoods.Pos_x = monster->monster.Current_x;
-        t_PacklootGoods.Pos_y = monster->monster.Current_y;
-        t_PacklootGoods.Pos_z = monster->monster.Current_z;
-        t_PacklootGoods.MapID = monster->monster.MapID;
-        t_PacklootGoods.GoodsFlag = monster->monster.MonsterID * 10;
+//        LootPositionTime t_lootPositionTime;
+//        time_t timep;
+//        time(&timep);
+//        t_lootPositionTime.timep = (hf_uint32)timep;
+//        t_lootPositionTime.continueTime = GOODS_CONTINUETIME;
 
-        LootPositionTime t_lootPositionTime;
-        time_t timep;
-        time(&timep);
-        t_lootPositionTime.timep = (hf_uint32)timep;
-        t_lootPositionTime.continueTime = GOODS_CONTINUETIME;
-
-        memcpy(&t_lootPositionTime.goodsPos, &t_PacklootGoods, sizeof(STR_LootGoodsPos));
-        (*((*smap)[conn].m_lootPosition))[t_PacklootGoods.GoodsFlag] = t_lootPositionTime; //保存掉落物品时间位置
-        memcpy(buff, &t_packHead, sizeof(STR_PackHead));
-        memcpy(buff + sizeof(STR_PackHead), &t_PacklootGoods, sizeof(STR_LootGoodsPos));
-        conn->Write_all(buff, t_packHead.Len + sizeof(STR_PackHead));
-        srv->free(buff);
+//        memcpy(&t_lootPositionTime.goodsPos, &t_PacklootGoods, sizeof(STR_LootGoodsPos));
+//        (*((*smap)[conn].m_lootPosition))[t_PacklootGoods.GoodsFlag] = t_lootPositionTime; //保存掉落物品时间位置
     }
 }
 
@@ -1006,11 +1000,10 @@ void GameAttack::QuerySkillInfo()
 //发送玩家可以使用的技能
 void GameAttack::SendPlayerSkill(TCPConnection::Pointer conn)
 {
-    Server* srv = Server::GetInstance();
-    hf_char* buff = (hf_char*)srv->malloc();
-
+    hf_char buff[1024] = { 0 };
     STR_PlayerSkill t_skill;
     STR_PackHead t_packHead;
+    t_packHead.Flag = FLAG_CanUsedSkill;
     hf_uint32 i = 0;
     for(umap_skillInfo::iterator it = m_skillInfo->begin(); it != m_skillInfo->end(); it++)
     {
@@ -1020,15 +1013,20 @@ void GameAttack::SendPlayerSkill(TCPConnection::Pointer conn)
         t_skill.LeadTime = it->second.LeadTime;
         memcpy(buff + sizeof(STR_PackHead) + sizeof(STR_PlayerSkill)*i, &t_skill, sizeof(STR_PlayerSkill));
         i++;
+        if(i == (1024 - sizeof(STR_PackHead))/sizeof(STR_PlayerSkill) + 1)
+        {
+            t_packHead.Len = sizeof(STR_PlayerSkill) * i;
+            memcpy(buff, &t_packHead, sizeof(STR_PackHead));
+            conn->Write_all(buff, t_packHead.Len + sizeof(STR_PackHead));
+            i = 0;
+        }
     }
     if(i != 0)
     {
         t_packHead.Len = sizeof(STR_PlayerSkill) * i;
-        t_packHead.Flag = FLAG_CanUsedSkill;
         memcpy(buff, &t_packHead, sizeof(STR_PackHead));
         conn->Write_all(buff, t_packHead.Len + sizeof(STR_PackHead));
     }
-    srv->free(buff);
 }
 
 //判断技能是否过了冷却时间
@@ -1439,41 +1437,62 @@ void GameAttack::DeleteOverTimeGoods()
     time_t t_time;
     time(&t_time);
     hf_uint32 timep = (hf_uint32)t_time;
-    LootGoodsOverTime t_loot;
+    umap_lootGoods lootGoods = SessionMgr::Instance()->GetLootGoods();
     while(1)
-    {      
-        SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
-
-        for(SessionMgr::SessionMap::iterator it = smap->begin(); it != smap->end(); it++)
+    {
+        for(_umap_lootGoods::iterator it = lootGoods->begin(); it != lootGoods->end();)
         {
-            umap_lootPosition  t_lootPosition = it->second.m_lootPosition;
-            umap_lootGoods     t_lootGoods = it->second.m_lootGoods;
-            for(_umap_lootPosition::iterator pos_it = t_lootPosition->begin(); pos_it != t_lootPosition->end();)
+            if(it->second.ContinueTime <= timep)
             {
-                if(timep >= pos_it->second.timep + pos_it->second.continueTime)
-                {
-                    t_loot.loot = pos_it->first;
-                    it->first->Write_all(&t_loot, sizeof(LootGoodsOverTime));
+                hf_uint32 t_uniqueID = it->second.UniqueID;
+                it++;
+                SessionMgr::Instance()->LootGoodsDelete(t_uniqueID);
 
-                    _umap_lootGoods::iterator goods_it = t_lootGoods->find(pos_it->first);
-                    if(goods_it != t_lootGoods->end())
-                    {
-                        t_lootGoods->erase(goods_it);
-                    }
-                    _umap_lootPosition::iterator _pos_it = pos_it;
-                    pos_it++;
-                    t_lootPosition->erase(_pos_it);
-                }
-                else
-                {
-                    pos_it++;
-                    continue;
-                }
+//                _umap_lootGoods::iterator _it = it;
+//                it++;
+//                lootGoods->erase(_it);
+
             }
+            else
+            {
+                it++;
+            }         
         }
         sleep(1);
         timep++;
     }
+//        SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
+
+//        for(SessionMgr::SessionMap::iterator it = smap->begin(); it != smap->end(); it++)
+//        {
+//            umap_lootPosition  t_lootPosition = it->second.m_lootPosition;
+//            umap_lootGoods     t_lootGoods = it->second.m_lootGoods;
+//            for(_umap_lootPosition::iterator pos_it = t_lootPosition->begin(); pos_it != t_lootPosition->end();)
+//            {
+//                if(timep >= pos_it->second.timep + pos_it->second.continueTime)
+//                {
+//                    t_loot.loot = pos_it->first;
+//                    it->first->Write_all(&t_loot, sizeof(LootGoodsOverTime));
+
+//                    _umap_lootGoods::iterator goods_it = t_lootGoods->find(pos_it->first);
+//                    if(goods_it != t_lootGoods->end())
+//                    {
+//                        t_lootGoods->erase(goods_it);
+//                    }
+//                    _umap_lootPosition::iterator _pos_it = pos_it;
+//                    pos_it++;
+//                    t_lootPosition->erase(_pos_it);
+//                }
+//                else
+//                {
+//                    pos_it++;
+//                    continue;
+//                }
+//            }
+//        }
+//        sleep(1);
+//        timep++;
+//    }
 }
 
 

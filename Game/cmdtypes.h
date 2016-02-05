@@ -110,12 +110,15 @@ typedef boost::shared_ptr<_umap_roleMoney> umap_roleMoney;
 
 
 //掉落物品 <怪物ID/任务ID，掉落物品> 如果是装备，则vector.size() = 1;
-typedef boost::unordered_map<hf_uint32, vector<STR_LootGoods> > _umap_lootGoods;
+typedef boost::unordered_map<hf_uint32, STR_LootGoods> _umap_lootGoods;
 typedef boost::shared_ptr<_umap_lootGoods> umap_lootGoods;
 
+typedef boost::unordered_map<hf_uint32, STR_EquipmentAttr> _umap_lootEquAttr;
+typedef boost::shared_ptr<_umap_lootEquAttr> umap_lootEquAttr;
+
 //物品掉落位置
-typedef boost::unordered_map<hf_uint32, LootPositionTime> _umap_lootPosition;
-typedef boost::shared_ptr<_umap_lootPosition> umap_lootPosition;
+//typedef boost::unordered_map<hf_uint32, LootPositionTime> _umap_lootPosition;
+//typedef boost::shared_ptr<_umap_lootPosition> umap_lootPosition;
 
 //物品价格
 typedef boost::unordered_map<hf_uint32, STR_GoodsPrice> umap_goodsPrice;

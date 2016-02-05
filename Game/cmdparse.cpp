@@ -75,15 +75,12 @@ void CommandParse(TCPConnection::Pointer conn , hf_char *reg)
         Server::GetInstance()->free(reg);
         break;
     }
-    case FLAG_PlayerMove:    //玩家移动
-    {
-//        Logger::GetLogger()->Debug("Player move");
-//        STR_PlayerMove* t_move = (STR_PlayerMove*)Server::GetInstance()->malloc();
-//        memcpy(t_move, buf + sizeof(STR_PackHead), len);
+//    case FLAG_PlayerMove:    //玩家移动
+//    {
+//        STR_PackPlayerMove* t_move = (STR_PackPlayerMove*)reg;
 //        UserPosition::PlayerPositionMove(conn, t_move);
-//        Server::GetInstance()->RunTask(boost::bind(UserPosition::PlayerPositionMove, conn, t_move));
-        break;
-    }
+//        break;
+//    }
     case FLAG_UserAskTask: //玩家请求接受任务数据
     {
         hf_uint32 taskID = ((STR_PackUserAskTask*)reg)->TaskID;
@@ -357,6 +354,7 @@ void CommandParse(TCPConnection::Pointer conn , hf_char *reg)
     {
         Logger::GetLogger()->Info("Unkown pack");
         Logger::GetLogger()->Error("flag:%d, len:%d\n", head->Flag, head->Len);
+        Server::GetInstance()->free(reg);
         break;
     }
     }

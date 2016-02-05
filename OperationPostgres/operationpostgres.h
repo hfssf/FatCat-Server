@@ -17,49 +17,49 @@ public:
     void PushUpdateMoney(hf_uint32 roleid, STR_PlayerMoney* money)
     {
         UpdateMoney upMoney(roleid, money);
-        m_UpdateMoney->push(upMoney);
+//        m_UpdateMoney->push(upMoney);
     }
     void PopUpdateMoney();
 
     void PushUpdateLevel(hf_uint32 roleid, hf_uint8 level)
     {
         UpdateLevel upLevel(roleid, level);
-        m_UpdateLevel->push(upLevel);
+//        m_UpdateLevel->push(upLevel);
     }
     void PopUpdateLevel();
 
     void PushUpdateExp(hf_uint32 roleid, hf_uint32 exp)
     {
         UpdateExp upExp(roleid, exp);
-        m_UpdateExp->push(upExp);
+//        m_UpdateExp->push(upExp);
     }
     void PopUpdateExp();
 
     void PushUpdateGoods(hf_uint32 roleid, STR_Goods* goods, hf_uint8 operate)
     {
         UpdateGoods upGoods(roleid, goods, operate);
-        m_UpdateGoods->push(upGoods);
+//        m_UpdateGoods->push(upGoods);
     }
     void PopUpdateGoods();
 
     void PushUpdateEquAttr(hf_uint32 roleid, STR_EquipmentAttr* equ, hf_uint8 operate)
     {
         UpdateEquAttr upEpq(roleid, equ, operate);
-        m_UpdateEquAttr->push(upEpq);
+//        m_UpdateEquAttr->push(upEpq);
     }
     void PopUpdateEquAttr();
 
     void PushUpdateTask(hf_uint32 roleid, STR_TaskProcess* task, hf_uint8 operate)
     {
         UpdateTask upTask(roleid, task, operate);
-        m_UpdateTask->push(upTask);
+//        m_UpdateTask->push(upTask);
     }
     void PopUpdateTask();
 
     void PushUpdateCompleteTask(hf_uint32 roleid, hf_uint32 taskid)
     {
         UpdateCompleteTask upTask(roleid, taskid);
-        m_UpdateCompleteTask->push(upTask);
+//        m_UpdateCompleteTask->push(upTask);
     }
 
     void PopUpdateCompleteTask();

@@ -1074,76 +1074,76 @@ hf_int32 DiskDBManager::GetPlayerEqu(umap_roleEqu playerEqu, const hf_char* str)
 }
 
 
-//查询玩家未捡取的物品位置
-hf_int32 DiskDBManager::GetNotPickGoodsPosition(umap_lootPosition lootPosition, const hf_char* str)
-{
-    time_t timep;
-    time(&timep);
-    m_mtx.lock();
-    PGresult* t_PGresult = PQexec(m_PGconn, str);
-    m_mtx.unlock();
-    ExecStatusType t_status = PQresultStatus(t_PGresult);
-    if(t_status != PGRES_TUPLES_OK)
-    {
-        return -1;
-    }
-    else
-    {
-        hf_int32 t_row = PQntuples(t_PGresult);
-        LootPositionTime t_loot;
-        for(hf_int32 i = 0; i < t_row; i++)
-        {
-            t_loot.timep = (hf_uint32)timep;
-            t_loot.continueTime = atoi(PQgetvalue(t_PGresult, i, 0));
-            t_loot.goodsPos.GoodsFlag = atoi(PQgetvalue(t_PGresult, i, 1));
-            t_loot.goodsPos.Pos_x = atoi(PQgetvalue(t_PGresult, i, 2));
-            t_loot.goodsPos.Pos_y = atoi(PQgetvalue(t_PGresult, i, 3));
-            t_loot.goodsPos.Pos_z = atoi(PQgetvalue(t_PGresult, i, 4));
-            t_loot.goodsPos.MapID = atoi(PQgetvalue(t_PGresult, i, 5));
+////查询玩家未捡取的物品位置
+//hf_int32 DiskDBManager::GetNotPickGoodsPosition(umap_lootPosition lootPosition, const hf_char* str)
+//{
+//    time_t timep;
+//    time(&timep);
+//    m_mtx.lock();
+//    PGresult* t_PGresult = PQexec(m_PGconn, str);
+//    m_mtx.unlock();
+//    ExecStatusType t_status = PQresultStatus(t_PGresult);
+//    if(t_status != PGRES_TUPLES_OK)
+//    {
+//        return -1;
+//    }
+//    else
+//    {
+//        hf_int32 t_row = PQntuples(t_PGresult);
+//        LootPositionTime t_loot;
+//        for(hf_int32 i = 0; i < t_row; i++)
+//        {
+//            t_loot.timep = (hf_uint32)timep;
+//            t_loot.continueTime = atoi(PQgetvalue(t_PGresult, i, 0));
+//            t_loot.goodsPos.GoodsFlag = atoi(PQgetvalue(t_PGresult, i, 1));
+//            t_loot.goodsPos.Pos_x = atoi(PQgetvalue(t_PGresult, i, 2));
+//            t_loot.goodsPos.Pos_y = atoi(PQgetvalue(t_PGresult, i, 3));
+//            t_loot.goodsPos.Pos_z = atoi(PQgetvalue(t_PGresult, i, 4));
+//            t_loot.goodsPos.MapID = atoi(PQgetvalue(t_PGresult, i, 5));
 
-            (*lootPosition)[t_loot.goodsPos.GoodsFlag] = t_loot;
-        }
-        return t_row;
-    }
-}
+//            (*lootPosition)[t_loot.goodsPos.GoodsFlag] = t_loot;
+//        }
+//        return t_row;
+//    }
+//}
 
-//查询玩家未捡取的物品
-hf_int32 DiskDBManager::GetNotPickGoods(umap_lootGoods lootGoods, const hf_char* str)
-{
-    m_mtx.lock();
-    PGresult* t_PGresult = PQexec(m_PGconn, str);
-    m_mtx.unlock();
-    ExecStatusType t_status = PQresultStatus(t_PGresult);
-    if(t_status != PGRES_TUPLES_OK)
-    {
-        return -1;
-    }
-    else
-    {
-        hf_int32 t_row = PQntuples(t_PGresult);
-        STR_LootGoods t_goods;
-        vector<STR_LootGoods> vec;
-        for(hf_int32 i = 0; i < t_row; i++)
-        {
-            hf_uint32 lootID = atoi(PQgetvalue(t_PGresult, i, 0));
-            t_goods.LootGoodsID = atoi(PQgetvalue(t_PGresult, i, 1));
-            t_goods.Count = atoi(PQgetvalue(t_PGresult, i, 2));
+////查询玩家未捡取的物品
+//hf_int32 DiskDBManager::GetNotPickGoods(umap_lootGoods lootGoods, const hf_char* str)
+//{
+//    m_mtx.lock();
+//    PGresult* t_PGresult = PQexec(m_PGconn, str);
+//    m_mtx.unlock();
+//    ExecStatusType t_status = PQresultStatus(t_PGresult);
+//    if(t_status != PGRES_TUPLES_OK)
+//    {
+//        return -1;
+//    }
+//    else
+//    {
+//        hf_int32 t_row = PQntuples(t_PGresult);
+//        STR_LootGoods t_goods;
+//        vector<STR_LootGoods> vec;
+//        for(hf_int32 i = 0; i < t_row; i++)
+//        {
+//            hf_uint32 lootID = atoi(PQgetvalue(t_PGresult, i, 0));
+//            t_goods.LootGoodsID = atoi(PQgetvalue(t_PGresult, i, 1));
+//            t_goods.Count = atoi(PQgetvalue(t_PGresult, i, 2));
 
-            _umap_lootGoods::iterator it = lootGoods->find(lootID);
-            if(it != lootGoods->end())
-            {
-                it->second.push_back(t_goods);
-            }
-            else
-            {
-                vec.clear();
-                vec.push_back(t_goods);
-                (*lootGoods)[lootID] = vec;
-            }
-        }
-        return t_row;
-    }
-}
+//            _umap_lootGoods::iterator it = lootGoods->find(lootID);
+//            if(it != lootGoods->end())
+//            {
+//                it->second.push_back(t_goods);
+//            }
+//            else
+//            {
+//                vec.clear();
+//                vec.push_back(t_goods);
+//                (*lootGoods)[lootID] = vec;
+//            }
+//        }
+//        return t_row;
+//    }
+//}
 
 //查询物品价格
 hf_int32 DiskDBManager::GetGoodsPrice(umap_goodsPrice* goodsPrice, const hf_char* str)

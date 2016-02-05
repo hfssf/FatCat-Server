@@ -54,7 +54,7 @@ void PlayerLogin::ReturnRoleListSaveData(TCPConnection::Pointer conn)
     DeleteFromMonsterView(conn);  //从怪物可视范围内删除该玩家
    //SaveRoleEquDurability(conn);  //将玩家装备当前耐久度更新到数据库
     FriendOffline(conn);          //发送下线通知给好友
-    SaveRoleNotPickGoods(conn);   //保存玩家未捡取的掉落物品
+//    SaveRoleNotPickGoods(conn);   //保存玩家未捡取的掉落物品
     SendOffLineToViewRole(conn);  //将下线消息通知给可视范围内的玩家
 //    SessionMgr::Instance()->NickSockErase((*smap)[conn].m_RoleBaseInfo.Nick);
     SessionMgr::Instance()->RoleNickErase(roleid, conn);
@@ -113,7 +113,7 @@ void PlayerLogin::SavePlayerOfflineData(TCPConnection::Pointer conn)
     DeleteFromMonsterView(conn);  //从怪物可视范围内删除该玩家
     //SaveRoleEquDurability(conn);  //将玩家装备当前耐久度更新到数据库
     FriendOffline(conn);          //发送下线通知给好友
-    SaveRoleNotPickGoods(conn);   //保存玩家未捡取的掉落物品
+//    SaveRoleNotPickGoods(conn);   //保存玩家未捡取的掉落物品
     SendOffLineToViewRole(conn);  //将下线消息通知给可视范围内的玩家
 
     SessionMgr::Instance()->RoleNickErase(roleid, conn);
@@ -422,6 +422,11 @@ void PlayerLogin::LoginRole(TCPConnection::Pointer conn, hf_uint32 roleid)
 
         Logger::GetLogger()->Debug("Send Position data.....");
         UserPosition::Position_push(conn, roleid);
+        //发送服务器本地时间
+        STR_PackTime t_timep;
+        t_timep.timep = Server::GetInstance()->GetGameAttack()->GetCurrentTime();
+        printf("player login success:system time: %lf\n",t_timep.timep);
+        conn->Write_all(&t_timep, sizeof(STR_PackTime));
 
         sbd.Clear();
         sbd << "select * from t_playerbodyequipment where roleid = " << roleid << ";";
@@ -465,7 +470,8 @@ void PlayerLogin::LoginRole(TCPConnection::Pointer conn, hf_uint32 roleid)
         SendRoleMoney(conn, roleid);        //发送玩家金币
         SendRoleGoods(conn, roleid);        //发送玩家背包物品
         SendRoleEquAttr(conn, roleid);      //发送玩家装备属性
-        SendRoleNotPickGoods(conn, roleid); //发送玩家未捡取的物品
+//        SendRoleNotPickGoods(conn, roleid); //发送玩家未捡取的物品
+        SessionMgr::Instance()->SendNotPickGoods(conn);
         GetPlayerCompleteTask(conn);        //查询玩家已经完成的任务
 
         Server* srv = Server::GetInstance();
@@ -543,7 +549,6 @@ void PlayerLogin::SendRoleList(TCPConnection::Pointer conn, hf_char* userID)
                 t_packHead.Len = sizeof(STR_RoleBasicInfo) * j;
                 memcpy(buff, &t_packHead, sizeof(STR_PackHead));
                 conn->Write_all(buff, sizeof(STR_PackHead) + t_packHead.Len);
-                memset(buff, 0, CHUNK_SIZE);
                 j = 0;
             }
         }
@@ -588,10 +593,13 @@ void PlayerLogin::SendFriendList(TCPConnection::Pointer conn, hf_uint32 RoleID)
     hf_uint32 t_row = srv->getDiskDB()->GetFriendList(t_friendList, sbd.str());
     if(t_row > 0) //有好友列表
     {
-        hf_char* buff = (hf_char*)srv->malloc();
+        hf_char buff[1024] = { 0 };
         hf_int32 i = 0;
         STR_PackFriendOnLine t_friendOnLine;
         t_friendOnLine.Role = RoleID;
+        STR_PackHead t_packHead;
+        t_packHead.Flag = FLAG_FriendList;
+
         for(_umap_friendList::iterator it = t_friendList->begin(); it != t_friendList->end(); it++)
         {
             _umap_roleSock::iterator iter = t_roleSock->find(it->first); //查询好友是否在线
@@ -603,13 +611,21 @@ void PlayerLogin::SendFriendList(TCPConnection::Pointer conn, hf_uint32 RoleID)
             }
             memcpy(buff + sizeof(STR_PackHead) + i*sizeof(STR_FriendInfo), &(it->second), sizeof(STR_FriendInfo));
             i++;
+            if(i == (1024 - sizeof(STR_PackHead))/sizeof(STR_FriendInfo) + 1)
+            {
+                t_packHead.Len = i * sizeof(STR_FriendInfo);
+                memcpy(buff, &t_packHead, sizeof(STR_PackHead));
+                conn->Write_all(buff, t_packHead.Len + sizeof(STR_PackHead));
+                i = 0;
+            }
         }
-        STR_PackHead t_packHead;
-        t_packHead.Flag = FLAG_FriendList;
-        t_packHead.Len = i * sizeof(STR_FriendInfo);
-        memcpy(buff, &t_packHead, sizeof(STR_PackHead));
-        conn->Write_all(buff, t_packHead.Len + sizeof(STR_PackHead));
-        srv->free(buff);
+
+        if(i != 0)
+        {
+            t_packHead.Len = i * sizeof(STR_FriendInfo);
+            memcpy(buff, &t_packHead, sizeof(STR_PackHead));
+            conn->Write_all(buff, t_packHead.Len + sizeof(STR_PackHead));
+        }
     }
 }
 
@@ -627,7 +643,7 @@ void PlayerLogin::SendRoleMoney(TCPConnection::Pointer conn, hf_uint32 RoleID)
     if(t_row > 0)
     {
         hf_int32 count = t_playerMoney->size();
-        hf_char* buff = (hf_char*)srv->malloc();
+        hf_char buff[1024] = { 0 };
 
         memset(&t_packHead, 0, sizeof(STR_PackHead));
         t_packHead.Flag = FLAG_PlayerMoney;
@@ -640,7 +656,6 @@ void PlayerLogin::SendRoleMoney(TCPConnection::Pointer conn, hf_uint32 RoleID)
             i++;
         }
         conn->Write_all(buff, t_packHead.Len + sizeof(STR_PackHead));
-        srv->free(buff);
     }
 }
 
@@ -660,7 +675,7 @@ void PlayerLogin::SendRoleGoods(TCPConnection::Pointer conn, hf_uint32 RoleID)
     hf_uint32 t_row = srv->getDiskDB()->GetPlayerGoods(playerGoods, playerEqu, sbd.str());
     if(t_row > 0)
     {
-        hf_char* buff = (hf_char*)srv->malloc();
+        hf_char buff[1024] = { 0 };
 
         hf_int32 i = 0;
         for(_umap_roleEqu::iterator it = playerEqu->begin(); it != playerEqu->end(); it++)
@@ -682,7 +697,6 @@ void PlayerLogin::SendRoleGoods(TCPConnection::Pointer conn, hf_uint32 RoleID)
         t_packHead.Len = i * sizeof(STR_Goods);
         memcpy(buff, &t_packHead, sizeof(STR_PackHead));
         conn->Write_all(buff, t_packHead.Len + sizeof(STR_PackHead));
-        srv->free(buff);
     }
 }
 
@@ -705,7 +719,7 @@ void PlayerLogin::SendRoleEquAttr(TCPConnection::Pointer conn, hf_uint32 RoleID)
     hf_uint32 t_row = Server::GetInstance()->getDiskDB()->GetPlayerEqu(playerEqu, sbd.str());
     if(t_row > 0)
     {
-        hf_char* buff = (hf_char*)Server::GetInstance()->malloc();
+        hf_char buff[1024] = { 0 };
         memset(&t_packHead, 0, sizeof(STR_PackHead));
         t_packHead.Flag = FLAG_EquGoodsAttr;
         t_packHead.Len = playerEqu->size() * sizeof(STR_EquipmentAttr);
@@ -713,63 +727,62 @@ void PlayerLogin::SendRoleEquAttr(TCPConnection::Pointer conn, hf_uint32 RoleID)
         hf_int32 i = 0;
         for(_umap_roleEqu::iterator it = playerEqu->begin(); it != playerEqu->end(); it++)
         {
-            STR_EquipmentAttr* equattr = &it->second.equAttr;
+//            STR_EquipmentAttr* equattr = &it->second.equAttr;
 //            printf("equID=%d\n", equattr->EquID);
             memcpy(buff + sizeof(STR_PackHead) + i*sizeof(STR_EquipmentAttr), &(it->second.equAttr), sizeof(STR_EquipmentAttr));
             i++;
         }
         conn->Write_all(buff, t_packHead.Len + sizeof(STR_PackHead));
-        Server::GetInstance()->free(buff);
     }
 }
 
 //查询玩家未捡取的物品
 void PlayerLogin::SendRoleNotPickGoods(TCPConnection::Pointer conn, hf_uint32 RoleID)
 {
-    StringBuilder sbd;
-    STR_PackHead t_packHead;
-    t_packHead.Flag = FLAG_LootGoods;
-    Server* srv = Server::GetInstance();
-    SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
-    sbd << "select continuetime,lootid,pos_x,pos_y,pos_z,mapid from t_notpickgoodspos where roleid = " << RoleID << ";";
-    Logger::GetLogger()->Debug(sbd.str());
+//    StringBuilder sbd;
+//    STR_PackHead t_packHead;
+//    t_packHead.Flag = FLAG_LootGoods;
+//    Server* srv = Server::GetInstance();
+//    SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
+//    sbd << "select continuetime,lootid,pos_x,pos_y,pos_z,mapid from t_notpickgoodspos where roleid = " << RoleID << ";";
+//    Logger::GetLogger()->Debug(sbd.str());
 
-    umap_lootGoods lootGoods = (*smap)[conn].m_lootGoods;
-    umap_lootPosition lootPosition = (*smap)[conn].m_lootPosition;
-    hf_int32 t_row = srv->getDiskDB()->GetNotPickGoodsPosition(lootPosition, sbd.str());
-    if(t_row <= 0)
-    {
-        return;
-    }
+//    umap_lootGoods lootGoods = (*smap)[conn].m_lootGoods;
+//    umap_lootPosition lootPosition = (*smap)[conn].m_lootPosition;
+//    hf_int32 t_row = srv->getDiskDB()->GetNotPickGoodsPosition(lootPosition, sbd.str());
+//    if(t_row <= 0)
+//    {
+//        return;
+//    }
 
-    sbd.Clear();
-    sbd << "select lootid,goodsid,count from t_notpickgoods where roleid = " << RoleID << ";";
-    Logger::GetLogger()->Debug(sbd.str());
-    t_row = srv->getDiskDB()->GetNotPickGoods(lootGoods, sbd.str());
-    if(t_row <= 0)
-    {
-        return;
-    }
+//    sbd.Clear();
+//    sbd << "select lootid,goodsid,count from t_notpickgoods where roleid = " << RoleID << ";";
+//    Logger::GetLogger()->Debug(sbd.str());
+//    t_row = srv->getDiskDB()->GetNotPickGoods(lootGoods, sbd.str());
+//    if(t_row <= 0)
+//    {
+//        return;
+//    }
 
-    hf_char* buff = (hf_char*)srv->malloc();
-    for(_umap_lootPosition::iterator it = lootPosition->begin(); it != lootPosition->end(); it++)
-    {
-        memcpy(buff + sizeof(STR_PackHead), &(it->second.goodsPos), sizeof(STR_LootGoodsPos));
-        _umap_lootGoods::iterator iter = lootGoods->find(it->first);
-        if(iter == lootGoods->end())
-        {
-            return;
-        }
-        hf_uint32 i = 0;
-        for(vector<STR_LootGoods>::iterator vec = iter->second.begin(); vec != iter->second.end(); vec++)
-        {
-            memcpy(buff + sizeof(STR_PackHead) + sizeof(STR_LootGoodsPos) + i*sizeof(STR_LootGoods), &(*vec), sizeof(STR_LootGoods));
-            i++;
-        }
-        t_packHead.Len = sizeof(STR_LootGoodsPos) + sizeof(STR_LootGoods)*i;
-        memcpy(buff, &t_packHead, sizeof(STR_PackHead));
-        conn->Write_all(buff, t_packHead.Len + sizeof(STR_PackHead));
-    }
+//    hf_char* buff = (hf_char*)srv->malloc();
+//    for(_umap_lootPosition::iterator it = lootPosition->begin(); it != lootPosition->end(); it++)
+//    {
+//        memcpy(buff + sizeof(STR_PackHead), &(it->second.goodsPos), sizeof(STR_LootGoodsPos));
+//        _umap_lootGoods::iterator iter = lootGoods->find(it->first);
+//        if(iter == lootGoods->end())
+//        {
+//            return;
+//        }
+//        hf_uint32 i = 0;
+//        for(vector<STR_LootGoods>::iterator vec = iter->second.begin(); vec != iter->second.end(); vec++)
+//        {
+//            memcpy(buff + sizeof(STR_PackHead) + sizeof(STR_LootGoodsPos) + i*sizeof(STR_LootGoods), &(*vec), sizeof(STR_LootGoods));
+//            i++;
+//        }
+//        t_packHead.Len = sizeof(STR_LootGoodsPos) + sizeof(STR_LootGoods)*i;
+//        memcpy(buff, &t_packHead, sizeof(STR_PackHead));
+//        conn->Write_all(buff, t_packHead.Len + sizeof(STR_PackHead));
+//    }
 
 //    sbd << "delete from t_notpickgoodspos where roleid = " << RoleID << ";";
 //    Logger::GetLogger()->Debug(sbd.str());
@@ -780,7 +793,7 @@ void PlayerLogin::SendRoleNotPickGoods(TCPConnection::Pointer conn, hf_uint32 Ro
 //    Logger::GetLogger()->Debug(sbd.str());
 //    srv->getDiskDB()->Set(sbd.str());
 
-    srv->free(buff);
+//    srv->free(buff);
 }
 
 //查询玩家已经完成的任务
@@ -1008,99 +1021,99 @@ void PlayerLogin::SendOffLineToViewRole(TCPConnection::Pointer conn)
 
 
 
-//保存玩家未捡取的物品
-void PlayerLogin::SaveRoleNotPickGoods(TCPConnection::Pointer conn)
-{
-    time_t timep;
-    time(&timep);
-    SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
-    umap_lootPosition      t_lootPosition = (*smap)[conn].m_lootPosition;
-    hf_uint32 roleid = (*smap)[conn].m_roleid;
+////保存玩家未捡取的物品
+//void PlayerLogin::SaveRoleNotPickGoods(TCPConnection::Pointer conn)
+//{
+//    time_t timep;
+//    time(&timep);
+//    SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
+//    umap_lootPosition      t_lootPosition = (*smap)[conn].m_lootPosition;
+//    hf_uint32 roleid = (*smap)[conn].m_roleid;
 
-    StringBuilder sbd;
-    sbd << "delete from t_notpickgoods where roleid = " << roleid << ";";
-     Logger::GetLogger()->Debug(sbd.str());
-    if(Server::GetInstance()->getDiskDB()->Set(sbd.str()) == -1)
-    {
-        Logger::GetLogger()->Error("delete player not pickgoods error");
-        return;
-    }
+//    StringBuilder sbd;
+//    sbd << "delete from t_notpickgoods where roleid = " << roleid << ";";
+//     Logger::GetLogger()->Debug(sbd.str());
+//    if(Server::GetInstance()->getDiskDB()->Set(sbd.str()) == -1)
+//    {
+//        Logger::GetLogger()->Error("delete player not pickgoods error");
+//        return;
+//    }
 
-    sbd.Clear();
-    sbd << "insert into t_notpickgoods values(";
-    umap_lootGoods  t_lootGoods = (*smap)[conn].m_lootGoods;
-    hf_uint16 i = 0;
-    hf_uint16 count = t_lootGoods->size();
-    if(count == 0)
-    {
-        return;
-    }
-    for(_umap_lootGoods::iterator it = t_lootGoods->begin(); it != t_lootGoods->end(); it++)
-    {
-        hf_uint16 vec_count = it->second.size();
-        hf_uint16 j = 0;
-        for(vector<STR_LootGoods>::iterator iter = it->second.begin(); iter != it->second.end(); iter++)
-        {
-            sbd << roleid << "," << it->first << "," << iter->LootGoodsID << "," << iter->Count <<  ")";
-            if(vec_count != j+1)
-            {
-                sbd << ",(";
-                j++;
-            }
-        }
-        if(count == i+1)
-        {
-            sbd << ";";
-        }
-        else
-        {
-            sbd << ",(";
-            i++;
-        }
-    }
-    Logger::GetLogger()->Debug(sbd.str());
-    if(Server::GetInstance()->getDiskDB()->Set(sbd.str()) == -1)
-    {
-        Logger::GetLogger()->Error("insert player not pick goods error");
-    }
+//    sbd.Clear();
+//    sbd << "insert into t_notpickgoods values(";
+//    umap_lootGoods  t_lootGoods = (*smap)[conn].m_lootGoods;
+//    hf_uint16 i = 0;
+//    hf_uint16 count = t_lootGoods->size();
+//    if(count == 0)
+//    {
+//        return;
+//    }
+//    for(_umap_lootGoods::iterator it = t_lootGoods->begin(); it != t_lootGoods->end(); it++)
+//    {
+//        hf_uint16 vec_count = it->second.size();
+//        hf_uint16 j = 0;
+//        for(vector<STR_LootGoods>::iterator iter = it->second.begin(); iter != it->second.end(); iter++)
+//        {
+//            sbd << roleid << "," << it->first << "," << iter->LootGoodsID << "," << iter->Count <<  ")";
+//            if(vec_count != j+1)
+//            {
+//                sbd << ",(";
+//                j++;
+//            }
+//        }
+//        if(count == i+1)
+//        {
+//            sbd << ";";
+//        }
+//        else
+//        {
+//            sbd << ",(";
+//            i++;
+//        }
+//    }
+//    Logger::GetLogger()->Debug(sbd.str());
+//    if(Server::GetInstance()->getDiskDB()->Set(sbd.str()) == -1)
+//    {
+//        Logger::GetLogger()->Error("insert player not pick goods error");
+//    }
 
 
-    sbd.Clear();
-    sbd << "delete from t_notpickgoodspos where roleid = " << roleid << ";";
-    Logger::GetLogger()->Debug(sbd.str());
-   if(Server::GetInstance()->getDiskDB()->Set(sbd.str()) == -1)
-   {
-       Logger::GetLogger()->Error("delete player not pick goods pos error");
-   }
-    count = t_lootPosition->size();
-    if(count == 0)
-    {
-        return;
-    }
-    i = 0;
-    sbd.Clear();
-    sbd << "insert into t_notpickgoodspos values(";
-    for(_umap_lootPosition::iterator it = t_lootPosition->begin(); it != t_lootPosition->end(); it++)
-    {
+//    sbd.Clear();
+//    sbd << "delete from t_notpickgoodspos where roleid = " << roleid << ";";
+//    Logger::GetLogger()->Debug(sbd.str());
+//   if(Server::GetInstance()->getDiskDB()->Set(sbd.str()) == -1)
+//   {
+//       Logger::GetLogger()->Error("delete player not pick goods pos error");
+//   }
+//    count = t_lootPosition->size();
+//    if(count == 0)
+//    {
+//        return;
+//    }
+//    i = 0;
+//    sbd.Clear();
+//    sbd << "insert into t_notpickgoodspos values(";
+//    for(_umap_lootPosition::iterator it = t_lootPosition->begin(); it != t_lootPosition->end(); it++)
+//    {
 
-//        printf("插入物品位置，goods:物品掉落时间：%u,%u,当点时间：%u\n", it->second.timep,it->second.continueTime,timep);
-        sbd << roleid << "," << it->second.timep + it->second.continueTime - (hf_uint32)timep << "," << it->second.goodsPos.GoodsFlag << "," << it->second.goodsPos.Pos_x << "," << it->second.goodsPos.Pos_y << "," << it->second.goodsPos.Pos_z << "," << it->second.goodsPos.MapID << ")";
-        if(count == (i+1))
-        {
-            sbd << ";";
-        }
-        else
-        {
-            sbd << ",(";
-            i++;
-        }
-    }
-    Logger::GetLogger()->Debug(sbd.str());
-    if(Server::GetInstance()->getDiskDB()->Set(sbd.str()) == -1)
-    {
-        Logger::GetLogger()->Error("insert player not pick goods pos error");
-    }    
-}
+////        printf("插入物品位置，goods:物品掉落时间：%u,%u,当点时间：%u\n", it->second.timep,it->second.continueTime,timep);
+//        sbd << roleid << "," << it->second.timep + it->second.continueTime - (hf_uint32)timep << "," << it->second.goodsPos.GoodsFlag << "," << it->second.goodsPos.Pos_x << "," << it->second.goodsPos.Pos_y << "," << it->second.goodsPos.Pos_z << "," << it->second.goodsPos.MapID << ")";
+//        if(count == (i+1))
+//        {
+//            sbd << ";";
+//        }
+//        else
+//        {
+//            sbd << ",(";
+//            i++;
+//        }
+//    }
+//    Logger::GetLogger()->Debug(sbd.str());
+//    if(Server::GetInstance()->getDiskDB()->Set(sbd.str()) == -1)
+//    {
+//        Logger::GetLogger()->Error("insert player not pick goods pos error");
+//    }
+//}
 
 //玩家角色属性
 void PlayerLogin::SaveRoleInfo(TCPConnection::Pointer conn)
@@ -1284,9 +1297,9 @@ void PlayerLogin::SendViewRole(TCPConnection::Pointer conn)
     STR_PackPlayerPosition* pos = &(*smap)[conn].m_position;
     hf_uint32 roleid = (*smap)[conn].m_roleid;
     hf_uint32 otherRoleid = 0;
-    Server* srv = Server::GetInstance();
-    hf_char* comebuff = (hf_char*)srv->malloc();
-    hf_char* leavebuff = (hf_char*)srv->malloc();
+
+    hf_char comebuff[1024] = { 0 };
+    hf_char leavebuff[1024] = { 0 };
     hf_uint16 pushCount = 0;
     hf_uint16 popCount = 0;
     STR_PackHead t_packHead;
@@ -1385,9 +1398,6 @@ void PlayerLogin::SendViewRole(TCPConnection::Pointer conn)
         //发送离开可视范围内的玩家
         conn->Write_all(leavebuff, sizeof(STR_PackHead) + t_packHead.Len);
     }
-
-    srv->free(comebuff);
-    srv->free(leavebuff);
 }
 
 
@@ -1432,7 +1442,7 @@ void PlayerLogin::FriendOffline(TCPConnection::Pointer conn)
     STR_PackHead t_packHead;
     t_packHead.Flag = FLAG_FriendOffLine;
     t_packHead.Len = sizeof(roleid);
-    hf_char* buff = (hf_char*)Server::GetInstance()->malloc();
+    hf_char buff[1024] = { 0 };
     memcpy(buff, &t_packHead, sizeof(STR_PackHead));
     memcpy(buff + sizeof(STR_PackHead), &roleid, sizeof(roleid));
     for(_umap_friendList::iterator it = friendList->begin(); it != friendList->end(); it++)
@@ -1444,7 +1454,6 @@ void PlayerLogin::FriendOffline(TCPConnection::Pointer conn)
             (*(*smap)[t_sock->second].m_friendList)[roleid].Status = OFFLINE;
         }
     }
-    Server::GetInstance()->free(buff);
 }
 
 

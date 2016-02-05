@@ -133,7 +133,6 @@ hf_float    Monster::caculateDistanceWithMonster( STR_PackPlayerPosition *usr,  
 //推送新看到的怪物数据
 void Monster::PushViewMonsters( TCPConnection::Pointer conn)
 {
-    Server* srv = Server::GetInstance();
     SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
     STR_PackPlayerPosition* playerPosition =   &((*smap)[conn].m_position);
     umap_playerViewMonster t_playerViewMonster = (*smap)[conn].m_viewMonster;
@@ -142,8 +141,8 @@ void Monster::PushViewMonsters( TCPConnection::Pointer conn)
 
     STR_MonsterBasicInfo t_monsterBasicInfo;
 
-    hf_char* comebuff = (hf_char*)srv->malloc();
-    hf_char* leavebuff = (hf_char*)srv->malloc();
+    hf_char comebuff[1024] = { 0 };
+    hf_char leavebuff[1024] = { 0 };
     hf_uint16 pushcount = 0;
     hf_uint16 popcount = 0;
 
@@ -161,7 +160,6 @@ void Monster::PushViewMonsters( TCPConnection::Pointer conn)
             continue;
         }
          hf_float t_distance = caculateDistanceWithMonster(playerPosition, &it->second, currentTime, &t_monsterBasicInfo);
-//         cout << t_distance << endl;
          _umap_playerViewMonster::iterator monster = t_playerViewMonster->find(monsterID);
         if(monster == t_playerViewMonster->end()) //不存在
         {
@@ -176,7 +174,7 @@ void Monster::PushViewMonsters( TCPConnection::Pointer conn)
             memcpy(comebuff + sizeof(STR_PackHead) + sizeof(STR_MonsterBasicInfo)*pushcount, &t_monsterBasicInfo, sizeof(STR_MonsterBasicInfo));
             pushcount++;
 
-            if(pushcount == (CHUNK_SIZE - sizeof(STR_PackHead))/sizeof(STR_MonsterBasicInfo))
+            if(pushcount == (1024 - sizeof(STR_PackHead))/sizeof(STR_MonsterBasicInfo) + 1)
             {
                 t_packHead.Flag = FLAG_MonsterCome;
                 t_packHead.Len = sizeof(STR_MonsterBasicInfo) * pushcount;
@@ -202,7 +200,7 @@ void Monster::PushViewMonsters( TCPConnection::Pointer conn)
         }
     }
 
-    if(pushcount != (CHUNK_SIZE - sizeof(STR_PackHead))/sizeof(STR_MonsterBasicInfo) && pushcount != 0)
+    if(pushcount != 0)
     {
         t_packHead.Len = pushcount * sizeof(STR_MonsterBasicInfo);
         t_packHead.Flag = FLAG_MonsterCome;
@@ -218,9 +216,6 @@ void Monster::PushViewMonsters( TCPConnection::Pointer conn)
         memcpy(leavebuff, &t_packHead, sizeof(STR_PackHead));
         conn->Write_all(leavebuff, t_packHead.Len + sizeof(STR_PackHead));
     }
-
-    srv->free(comebuff);
-    srv->free(leavebuff);
 }
 
 //从数据库中提取所有的怪物数据

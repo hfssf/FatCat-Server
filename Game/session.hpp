@@ -88,8 +88,8 @@ public:
 //        ,m_playerEquAttr(new _umap_roleEquAttr)
         ,m_playerMoney(new _umap_roleMoney)
         ,m_completeTask(new _umap_completeTask)
-        ,m_lootGoods(new _umap_lootGoods)
-        ,m_lootPosition(new _umap_lootPosition)
+//        ,m_lootGoods(new _umap_lootGoods)
+//        ,m_lootPosition(new _umap_lootPosition)
         ,m_interchage(new Interchange)
         ,m_taskGoods( new _umap_taskGoods)
     {
@@ -132,8 +132,8 @@ public:
         m_completeTask = sess.m_completeTask;
         memcpy(&m_position, &sess.m_position, sizeof(STR_PackPlayerPosition));
 //        m_position = sess.m_position;
-        m_lootGoods = sess.m_lootGoods;
-        m_lootPosition = sess.m_lootPosition;
+//        m_lootGoods = sess.m_lootGoods;
+//        m_lootPosition = sess.m_lootPosition;
         m_interchage = sess.m_interchage;
         memcpy(m_goodsPosition, sess.m_goodsPosition, BAGCAPACITY);
         memcpy(&m_StartPos, &sess.m_StartPos, sizeof(STR_PlayerStartPos));
@@ -199,8 +199,8 @@ public:
     umap_roleMoney          m_playerMoney;       //玩家金币
     umap_completeTask       m_completeTask;      //玩家已经完成的任务
     STR_PackPlayerPosition  m_position;          //位置
-    umap_lootGoods          m_lootGoods;         //掉落物品
-    umap_lootPosition       m_lootPosition;      //掉落物品位置，时间
+//    umap_lootGoods          m_lootGoods;         //掉落物品
+//    umap_lootPosition       m_lootPosition;      //掉落物品位置，时间
     boost::shared_ptr<Interchange> m_interchage;
     hf_char                 m_goodsPosition[BAGCAPACITY];   //保存玩家物品位置
     STR_PlayerStartPos      m_StartPos;          //保存玩家刷新数据起始点
@@ -313,6 +313,15 @@ public:
         return m_recoveryHPMagic;
     }
 
+    umap_lootGoods GetLootGoods()
+    {
+        return m_lootGoods;
+    }
+    umap_lootEquAttr GetLootEquAttr()
+    {
+        return m_lootEquAttr;
+    }
+
     void SessionsNameAdd(TCPConnection::Pointer conn, hf_char* name)
     {
         m_sessNameMtx.lock();
@@ -397,7 +406,75 @@ public:
         m_ReHPMagicMtx.unlock();
     }
 
+    void LootGoodsAdd(STR_LootGoods goods)
+    {
+        m_LootGoodsMtx.lock();
+        (*m_lootGoods)[goods.UniqueID] = goods;
+        m_LootGoodsMtx.unlock();
+    }
+    void LootGoodsDelete(hf_uint32 uniqueID)
+    {
+        SendDisappearGoods(uniqueID);
+        m_LootGoodsMtx.lock();
+        m_lootGoods->erase(uniqueID);
+        m_LootGoodsMtx.unlock();
+    }
 
+    void LootEquAttrAdd(STR_EquipmentAttr equAttr)
+    {
+        (*m_lootEquAttr)[equAttr.EquID] = equAttr;
+    }
+
+    void LootEquAttrDelete(hf_uint32 equid)
+    {
+        m_lootEquAttr->erase(equid);
+    }
+
+    void SendLootGoods(STR_LootGoods* goods)
+    {
+        STR_PackLootGoods t_goods(goods);
+        for(_umap_roleSock::iterator it = m_roleSock->begin(); it != m_roleSock->end(); it++)
+        {
+            it->second->Write_all(&t_goods, sizeof(STR_PackLootGoods));
+        }
+    }
+
+
+    void SendDisappearGoods(hf_uint32 uniqueID)
+    {
+        STR_PackLootGoodsOverTime goods;
+        goods.UniqueID = uniqueID;
+        for(_umap_roleSock::iterator it = m_roleSock->begin(); it != m_roleSock->end(); it++)
+        {
+            it->second->Write_all(&goods, sizeof(STR_PackLootGoodsOverTime));
+        }
+    }
+
+    void SendNotPickGoods(TCPConnection::Pointer conn)
+    {
+        hf_char buff[1024] = { 0 };
+        hf_uint8 i = 0;
+        STR_PackHead head;
+        head.Flag = FLAG_LootGoods;
+        for(_umap_lootGoods::iterator it = m_lootGoods->begin(); it != m_lootGoods->end(); it++)
+        {
+            memcpy(buff + sizeof(STR_PackHead) + i*sizeof(STR_LootGoods), &it->second, sizeof(STR_LootGoods));
+            i++;
+            if(i == (1024 - sizeof(STR_PackHead))/sizeof(STR_LootGoods) + 1)
+            {
+                head.Len = i*sizeof(STR_LootGoods);
+                memcpy(buff, &head, sizeof(STR_PackHead));
+                conn->Write_all(buff, sizeof(STR_PackHead) + head.Len);
+                i = 0;
+            }
+        }
+        if(i != 0)
+        {
+            head.Len = i*sizeof(STR_LootGoods);
+            memcpy(buff, &head, sizeof(STR_PackHead));
+            conn->Write_all(buff, sizeof(STR_PackHead) + head.Len);
+        }
+    }
 
 private:
 
@@ -408,7 +485,9 @@ private:
       m_nickSock(new _umap_nickSock),   
       m_recoveryHP(new _umap_recoveryHP),
       m_recoveryMagic(new _umap_recoveryMagic),
-      m_recoveryHPMagic(new _umap_recoveryHPMagic)
+      m_recoveryHPMagic(new _umap_recoveryHPMagic),
+      m_lootGoods(new _umap_lootGoods),
+      m_lootEquAttr(new _umap_lootEquAttr)
     {
         cout<<"\n===================Create SessionMgr================="<<endl;
     }
@@ -422,14 +501,15 @@ private:
     umap_recoveryHP             m_recoveryHP;      //使用延时恢复血量的消耗品
     umap_recoveryMagic          m_recoveryMagic;   //使用延时恢复魔法的消耗品
     umap_recoveryHPMagic        m_recoveryHPMagic; //使用延时恢复血量魔法的消耗品
+    umap_lootGoods              m_lootGoods;       //掉落或丢弃物品
+    umap_lootEquAttr            m_lootEquAttr;     //掉落装备属性
 
     boost::mutex                m_sessNameMtx;
     boost::mutex                m_roleNickMtx;
-//    boost::mutex                m_nickMtx;
-//    boost::mutex                m_nameMtx;
     boost::mutex                m_ReHPMtx;
     boost::mutex                m_ReMagicMtx;
     boost::mutex                m_ReHPMagicMtx;
+    boost::mutex                m_LootGoodsMtx;
 };
 
 

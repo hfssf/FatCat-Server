@@ -98,7 +98,7 @@ public:
     }
 
     //用户位置移动
-    static void PlayerPositionMove(TCPConnection::Pointer conn, STR_PlayerMove* Move)
+    static void PlayerPositionMove(TCPConnection::Pointer conn, STR_PackPlayerMove* Move)
     {
         SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
 

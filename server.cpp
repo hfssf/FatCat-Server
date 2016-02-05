@@ -127,7 +127,7 @@ void Server::InitDB()
    //删除过了时间的掉落物品
    srv->RunTask(boost::bind(&GameAttack::DeleteOverTimeGoods, t_attack));
    //将玩家的数据更新进redis
-   srv->RunTask(boost::bind(&OperationPostgres::UpdateRedisData, t_opePost));
+//   srv->RunTask(boost::bind(&OperationPostgres::UpdateRedisData, t_opePost));
    //将玩家的数据更新进数据库
 //   srv->RunTask(boost::bind(&OperationPostgres::UpdatePostgresData, t_opePost));
 }

@@ -83,6 +83,7 @@ public:
     void SendRoleEquAttr(TCPConnection::Pointer conn, hf_uint32 RoleID);
     //发送角色金币
     void SendRoleMoney(TCPConnection::Pointer conn, hf_uint32 RoleID);
+
     //查询玩家未捡取的物品
     void SendRoleNotPickGoods(TCPConnection::Pointer conn, hf_uint32 RoleID);
 
@@ -105,7 +106,7 @@ public:
     //将下线消息通知给可视范围内的玩家
     void SendOffLineToViewRole(TCPConnection::Pointer conn);
     //保存玩家未捡取的物品
-    void SaveRoleNotPickGoods(TCPConnection::Pointer conn);
+//    void SaveRoleNotPickGoods(TCPConnection::Pointer conn);
 
     //玩家角色属性
     void SaveRoleInfo(TCPConnection::Pointer conn);

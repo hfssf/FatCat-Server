@@ -15,9 +15,9 @@ public:
     //捡物品
     void PickUpGoods(TCPConnection::Pointer conn, STR_PackPickGoods* t_pickGoods);
 
-    void PickUpMoney(TCPConnection::Pointer conn, STR_LootGoods* lootGoods, hf_uint32 dropID);
-    hf_uint8 PickUpEqu(TCPConnection::Pointer conn, STR_LootGoods* lootGoods, hf_uint32 dropID);
-    hf_uint8 PickUpcommonGoods(TCPConnection::Pointer conn, STR_LootGoods* lootGoods, hf_uint32 dropID);
+    void PickUpMoney(TCPConnection::Pointer conn, STR_LootGoods* lootGoods);
+    hf_uint8 PickUpEqu(TCPConnection::Pointer conn, STR_LootGoods* lootGoods);
+    hf_uint8 PickUpcommonGoods(TCPConnection::Pointer conn, STR_LootGoods* lootGoods);
 
     //查询物品价格
     void QueryGoodsPrice();
@@ -41,8 +41,6 @@ public:
     void MoveBagCommonGoods(TCPConnection::Pointer conn, STR_PackMoveBagGoods* moveGoods);
     //交换背包两个位置上的不同普通物品
     void ExchangeBagCommonGoods(TCPConnection::Pointer conn, STR_PackMoveBagGoods* moveGoods);
-    //交换物品
-//    void ExchangeBagGoods(TCPConnection::Pointer conn, STR_PackMoveBagGoods* moveGoods);
 
     //购买物品
     void BuyGoods(TCPConnection::Pointer conn, STR_PackBuyGoods* buyGoods);
@@ -58,6 +56,7 @@ public:
     static hf_uint32  GetThisGoodsCount(TCPConnection::Pointer conn, hf_uint32 goodsID);
 
     static hf_uint32  GetEquipmentID();
+    static hf_uint32  GetLootGoodsID();
 
     static void UsePos(TCPConnection::Pointer conn, hf_uint16 pos);      //使用位置
     static void ReleasePos(TCPConnection::Pointer conn, hf_uint16 pos);  //释放位置
@@ -93,6 +92,7 @@ private:
     umap_consumable*    m_consumableAttr;   //消耗品属性
     umap_equAttr*       m_equAttr;          //装备属性
     static hf_uint32    m_equipmentID;      //装备ID
+    static hf_uint32    m_lootGoodsID;      //掉落物品唯一ID
 };
 
 #endif // OPERATIONGOODS_H

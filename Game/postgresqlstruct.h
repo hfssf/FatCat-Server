@@ -368,42 +368,96 @@ typedef struct _STR_PackUserAttackPoint
 
 
 //17.掉落物品位置
-typedef struct _STR_LootGoodsPos
-{
-    hf_float  Pos_x;
-    hf_float  Pos_y;
-    hf_float  Pos_z;
-    hf_uint32 MapID;
-    hf_uint32 GoodsFlag;           //物品掉落物品标记,一般为怪物ID或任务ID
-}STR_LootGoodsPos;
+//typedef struct _STR_LootGoodsPos
+//{
+//    hf_float  Pos_x;
+//    hf_float  Pos_y;
+//    hf_float  Pos_z;
+//    hf_uint32 MapID;
+//    hf_uint32 GoodsFlag;           //物品掉落物品标记,一般为怪物ID或任务ID
+//}STR_LootGoodsPos;
 
-//物品掉落时间，位置
-typedef struct _LootPositionTime
-{
-    hf_uint32 timep;                 //掉落时间
-    hf_uint32 continueTime;          //持续时间
-    STR_LootGoodsPos goodsPos;   //物品位置
-}LootPositionTime;
+////物品掉落时间，位置
+//typedef struct _LootPositionTime
+//{
+//    hf_uint32 timep;                 //掉落时间
+//    hf_uint32 continueTime;          //持续时间
+//    STR_LootGoodsPos goodsPos;   //物品位置
+//}LootPositionTime;
 
 
 //掉落物品
+//typedef struct _STR_LootGoods
+//{
+//    hf_uint32 LootGoodsID;      //掉落的物品ID
+//    hf_uint16 Count;            //掉落数量
+//}STR_LootGoods;
+
 typedef struct _STR_LootGoods
 {
-    hf_uint32 LootGoodsID;      //掉落的物品ID
-    hf_uint16 Count;            //掉落数量
+    hf_uint32 UniqueID;    //唯一ID
+    hf_uint32 GoodsID;     //物品ID
+    hf_uint32 TypeID;      //物品类型ID
+    hf_uint32 MapID;
+    hf_float  Pos_x;
+    hf_float  Pos_y;
+    hf_float  Pos_z;
+    hf_uint32 ProtectTime;  //保护时间点
+    hf_uint32 ProtectStatus;//保护状态，玩家roleid
+    hf_uint32 ContinueTime; //包括消失时间点
+    hf_uint16 Count;        //数量
+
 }STR_LootGoods;
 
-//超时物品
-typedef struct _LootGoodsOverTime
+//掉落或丢弃物品结构
+typedef struct _STR_PackLootGoods
 {
-    _LootGoodsOverTime()
+    _STR_PackLootGoods(STR_LootGoods* _lootGoods)
     {
-        head.Len = sizeof(loot);
+        bzero(&head, sizeof(_STR_PackLootGoods));
+        head.Flag = FLAG_LootGoods;
+        head.Len = sizeof(_STR_PackLootGoods) - sizeof(STR_PackHead);
+        memcpy(&lootGoods, _lootGoods, sizeof(STR_LootGoods));
+    }
+
+    _STR_PackLootGoods()
+    {
+        bzero(&head, sizeof(_STR_PackLootGoods));
+        head.Flag = FLAG_LootGoods;
+        head.Len = sizeof(_STR_PackLootGoods) - sizeof(STR_PackHead);
+    }
+
+    STR_PackHead  head;
+    STR_LootGoods lootGoods;
+}STR_PackLootGoods;
+
+
+typedef struct _STR_PackTime
+{
+    _STR_PackTime()
+    {
+        bzero(&head, sizeof(STR_PackHead));
+        head.Flag = FLAG_TIME;
+        head.Len = sizeof(_STR_PackTime) - sizeof(STR_PackHead);
+    }
+
+    STR_PackHead head;
+    hf_double    timep;
+}STR_PackTime;
+
+
+//超时物品
+typedef struct _STR_PackLootGoodsOverTime
+{
+    _STR_PackLootGoodsOverTime()
+    {
+        bzero(&head, sizeof(_STR_PackLootGoodsOverTime));
+        head.Len = sizeof(_STR_PackLootGoodsOverTime) - sizeof(STR_PackHead);
         head.Flag = FLAG_LootGoodsOverTime;
     }
     STR_PackHead head;
-    hf_uint32 loot;
-}LootGoodsOverTime;
+    hf_uint32 UniqueID;
+}STR_PackLootGoodsOverTime;
 
 
 //玩家物品变动数据包,分割移动物品}
@@ -422,7 +476,7 @@ typedef struct _STR_PackRemoveBagGoods
 {
     STR_PackHead head;
     hf_uint32 GoodsID;   //物品ID
-    hf_uint8  Position;       //物品在背包里的位置
+    hf_uint8  Position;  //物品在背包里的位置
 }STR_PackRemoveBagGoods;
 
 //从商店购买东西
@@ -453,8 +507,9 @@ typedef struct _STR_GoodsPrice
 typedef struct _STR_PackPickGoods
 {
     STR_PackHead head;
-    hf_uint32 LootGoodsID; //物品ID
-    hf_uint32 GoodsFlag;   //掉落者 怪物ID
+    hf_uint32 UniqueID;    //唯一ID
+//    hf_uint32 LootGoodsID; //物品ID
+//    hf_uint32 GoodsFlag;   //掉落者 怪物ID
 }STR_PackPickGoods;
 
 //19.玩家捡取物品结果数据包
@@ -474,20 +529,18 @@ typedef struct _STR_PackPickGoodsResult
         head.Len = sizeof(_STR_PackPickGoodsResult) - sizeof(STR_PackHead);
         head.Flag = FLAG_PickGoodsResult;
     }
-    _STR_PackPickGoodsResult(hf_uint32 _LootGoodsID, hf_uint32 _GoodsFlag, hf_uint16 _Count, hf_uint8 _Result)
+    _STR_PackPickGoodsResult(hf_uint32 _UniqueID, hf_uint16 _Count, hf_uint8 _Result)
     {
         bzero(&head,sizeof(_STR_PackPickGoodsResult));
         head.Len = sizeof(_STR_PackPickGoodsResult) - sizeof(STR_PackHead);
         head.Flag = FLAG_PickGoodsResult;
-        LootGoodsID = _LootGoodsID;
-        GoodsFlag  = _GoodsFlag;
+        UniqueID = _UniqueID;
         Count = _Count;
         Result = _Result;
     }
 
     STR_PackHead head;
-    hf_uint32  LootGoodsID;
-    hf_uint32  GoodsFlag;
+    hf_uint32  UniqueID;
     hf_uint16  Count;
     hf_uint8   Result;
 }STR_PackPickGoodsResult;
@@ -809,12 +862,13 @@ typedef struct _STR_PlayerStartPos
 }STR_PlayerStartPos;
 
 //玩家移动包
-typedef struct _STR_PlayerMove
+typedef struct _STR_PackPlayerMove
 {
+    STR_PackHead head;
     hf_float     Direct; //玩家方向
     hf_uint8     Opt;    //移动方向
     hf_uint8     ActID;  //玩家动作
-}STR_PlayerMove;
+}STR_PackPlayerMove;
 
 typedef struct _STR_PackPlayerOffline
 {
