@@ -18,17 +18,25 @@
 #define  PI                    3.141592654
 #define  ThreadCount           CORE_NUM*8  //线程池，线程数量
 #define  PackageCount          10*1024     //队列中可以存放未处理包的数量
+#define  PACKAGE_LEN           1024       //每个包的长度
+
+#define  REDISIP               "127.0.0.1" //redisIP
+#define  REDISPORT             6379        //redis端口
+
 
 #define  View                  1           //能看到，用来表示玩家之间和玩家与怪物之间
 #define  NotView               2           //看不到
 #define  EquipMentID           20000000    //装备编号
 #define  Money_1               101         //1号金钱
 
+#define  LootProtectTime           30
+#define  LootContinueTime          90
+
 #define  BAGCAPACITY           65          //背包容量
 #define  GOODSMAXCOUNT         99          //每个格子物品最大数量
 
-#define  PlayerView            1000        //玩家可视范围 80
-#define  MonsterHatredView     1000        //怪物仇恨范围 60
+#define  PlayerView            500         //玩家可视范围 80
+#define  MonsterHatredView     500         //怪物仇恨范围 60
 #define  MonsterPursuitDis     600         //怪物追击玩家与起始追击点的距离
 
 #define  PlayerAttackView      150        //玩家普通攻击范围
@@ -136,7 +144,7 @@
 #define   RoleHitRate                     0.99   //命中率
 #define   RoleResistRate                  0.05   //抵挡率
 #define   CasterSpeed                     1.00   //施法速度
-#define   MoveSpeed                       1.00   //移动速度
+#define   MoveSpeed                       300   //移动速度
 #define   HurtSpeed                       1.00   //攻击速度
 #define   MaxSmallUniverse                100    //最大小宇宙
 
