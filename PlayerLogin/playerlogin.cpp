@@ -536,33 +536,31 @@ void PlayerLogin::SendRoleList(TCPConnection::Pointer conn, hf_char* userID)
         hf_uint32 j = 0;
         STR_PackHead t_packHead;
         t_packHead.Flag = FLAG_PlayerRoleList;
-        Logger::GetLogger()->Debug("RoleCount:%d",roleCount);
+//        Logger::GetLogger()->Debug("RoleCount:%d",roleCount);
         for(hf_int32 i = 0; i < roleCount; i++)
         {
 
             memcpy(buff + sizeof(STR_PackHead) +  j*sizeof(STR_RoleBasicInfo),&(t_Rolelist.m_Role[i]),sizeof(STR_RoleBasicInfo));
             j++;
-            Logger::GetLogger()->Debug("Send Row List cycle: i =%d",i);
-            if(j == (CHUNK_SIZE - sizeof(STR_PackHead))/sizeof(STR_RoleBasicInfo))
+//            Logger::GetLogger()->Debug("Send Row List cycle: i =%d",i);
+            if(j == (PACKAGE_LEN - sizeof(STR_PackHead))/sizeof(STR_RoleBasicInfo))
             {
-                Logger::GetLogger()->Debug("j= ,j=%d",j);
                 t_packHead.Len = sizeof(STR_RoleBasicInfo) * j;
                 memcpy(buff, &t_packHead, sizeof(STR_PackHead));
                 conn->Write_all(buff, sizeof(STR_PackHead) + t_packHead.Len);
                 j = 0;
             }
         }
-        if(j != (CHUNK_SIZE - sizeof(STR_PackHead))/sizeof(STR_RoleBasicInfo))
+        if(j != (PACKAGE_LEN - sizeof(STR_PackHead))/sizeof(STR_RoleBasicInfo))
         {
-            Logger::GetLogger()->Debug("j!=,j=%d",j);
             t_packHead.Len = sizeof(STR_RoleBasicInfo) * j;
             memcpy(buff, &t_packHead, sizeof(STR_PackHead));
-            Logger::GetLogger()->Debug("Send buff with TCP");
-            Logger::GetLogger()->Debug("Buffer Length:%d",t_packHead.Len + sizeof(STR_PackHead));
+//            Logger::GetLogger()->Debug("Send buff with TCP");
+//            Logger::GetLogger()->Debug("Buffer Length:%d",t_packHead.Len + sizeof(STR_PackHead));
             conn->Write_all(buff, sizeof(STR_PackHead) + t_packHead.Len);
-            Logger::GetLogger()->Debug("Send buff with TCP over");
+//            Logger::GetLogger()->Debug("Send buff with TCP over");
         }
-        Logger::GetLogger()->Debug("Ready to new query");
+//        Logger::GetLogger()->Debug("Ready to new query");
         sbd.Clear();
         sbd << "select t_playerbodyequipment.roleid,head,headtype,upperbody,upperbodytype,pants,pantstype,shoes,shoestype,belt,belttype,neaklace,neaklacetype,bracelet,bracelettype,leftring,leftringtype,rightring,rightringtype,phone,phonetype,weapon,weapontype from t_playerbodyequipment,t_playerrolelist where t_playerbodyequipment.roleid = t_playerrolelist.roleid and username = '" <<   userID << "' and ifdelete = 0;";
         Logger::GetLogger()->Debug(sbd.str());
@@ -593,7 +591,7 @@ void PlayerLogin::SendFriendList(TCPConnection::Pointer conn, hf_uint32 RoleID)
     hf_uint32 t_row = srv->getDiskDB()->GetFriendList(t_friendList, sbd.str());
     if(t_row > 0) //有好友列表
     {
-        hf_char buff[1024] = { 0 };
+        hf_char buff[PACKAGE_LEN] = { 0 };
         hf_int32 i = 0;
         STR_PackFriendOnLine t_friendOnLine;
         t_friendOnLine.Role = RoleID;
@@ -611,7 +609,7 @@ void PlayerLogin::SendFriendList(TCPConnection::Pointer conn, hf_uint32 RoleID)
             }
             memcpy(buff + sizeof(STR_PackHead) + i*sizeof(STR_FriendInfo), &(it->second), sizeof(STR_FriendInfo));
             i++;
-            if(i == (1024 - sizeof(STR_PackHead))/sizeof(STR_FriendInfo) + 1)
+            if(i == (PACKAGE_LEN - sizeof(STR_PackHead))/sizeof(STR_FriendInfo))
             {
                 t_packHead.Len = i * sizeof(STR_FriendInfo);
                 memcpy(buff, &t_packHead, sizeof(STR_PackHead));
@@ -643,7 +641,7 @@ void PlayerLogin::SendRoleMoney(TCPConnection::Pointer conn, hf_uint32 RoleID)
     if(t_row > 0)
     {
         hf_int32 count = t_playerMoney->size();
-        hf_char buff[1024] = { 0 };
+        hf_char buff[PACKAGE_LEN] = { 0 };
 
         memset(&t_packHead, 0, sizeof(STR_PackHead));
         t_packHead.Flag = FLAG_PlayerMoney;
@@ -675,7 +673,7 @@ void PlayerLogin::SendRoleGoods(TCPConnection::Pointer conn, hf_uint32 RoleID)
     hf_uint32 t_row = srv->getDiskDB()->GetPlayerGoods(playerGoods, playerEqu, sbd.str());
     if(t_row > 0)
     {
-        hf_char buff[1024] = { 0 };
+        hf_char buff[PACKAGE_LEN] = { 0 };
 
         hf_int32 i = 0;
         for(_umap_roleEqu::iterator it = playerEqu->begin(); it != playerEqu->end(); it++)
@@ -719,11 +717,9 @@ void PlayerLogin::SendRoleEquAttr(TCPConnection::Pointer conn, hf_uint32 RoleID)
     hf_uint32 t_row = Server::GetInstance()->getDiskDB()->GetPlayerEqu(playerEqu, sbd.str());
     if(t_row > 0)
     {
-        hf_char buff[1024] = { 0 };
+        hf_char buff[PACKAGE_LEN] = { 0 };
         memset(&t_packHead, 0, sizeof(STR_PackHead));
         t_packHead.Flag = FLAG_EquGoodsAttr;
-        t_packHead.Len = playerEqu->size() * sizeof(STR_EquipmentAttr);
-        memcpy(buff, &t_packHead, sizeof(STR_PackHead));
         hf_int32 i = 0;
         for(_umap_roleEqu::iterator it = playerEqu->begin(); it != playerEqu->end(); it++)
         {
@@ -731,8 +727,20 @@ void PlayerLogin::SendRoleEquAttr(TCPConnection::Pointer conn, hf_uint32 RoleID)
 //            printf("equID=%d\n", equattr->EquID);
             memcpy(buff + sizeof(STR_PackHead) + i*sizeof(STR_EquipmentAttr), &(it->second.equAttr), sizeof(STR_EquipmentAttr));
             i++;
+            if(i == (PACKAGE_LEN - sizeof(STR_PackHead))/sizeof(STR_EquipmentAttr))
+            {
+                t_packHead.Len = i * sizeof(STR_EquipmentAttr);
+                memcpy(buff, &t_packHead, sizeof(STR_PackHead));
+                conn->Write_all(buff, t_packHead.Len + sizeof(STR_PackHead));
+                i = 0;
+            }
         }
-        conn->Write_all(buff, t_packHead.Len + sizeof(STR_PackHead));
+        if(i != 0)
+        {
+            t_packHead.Len = i * sizeof(STR_EquipmentAttr);
+            memcpy(buff, &t_packHead, sizeof(STR_PackHead));
+            conn->Write_all(buff, t_packHead.Len + sizeof(STR_PackHead));
+        }
     }
 }
 
@@ -1298,8 +1306,8 @@ void PlayerLogin::SendViewRole(TCPConnection::Pointer conn)
     hf_uint32 roleid = (*smap)[conn].m_roleid;
     hf_uint32 otherRoleid = 0;
 
-    hf_char comebuff[1024] = { 0 };
-    hf_char leavebuff[1024] = { 0 };
+    hf_char comebuff[PACKAGE_LEN] = { 0 };
+    hf_char leavebuff[PACKAGE_LEN] = { 0 };
     hf_uint16 pushCount = 0;
     hf_uint16 popCount = 0;
     STR_PackHead t_packHead;
@@ -1355,7 +1363,7 @@ void PlayerLogin::SendViewRole(TCPConnection::Pointer conn)
 //            (*(it->second.m_viewRole))[roleid] = conn;
             it->first->Write_all(&t_roleCome, sizeof(STR_PackRoleCome));
 
-            if(pushCount == (CHUNK_SIZE - sizeof(STR_PackHead))/len)
+            if(pushCount == (PACKAGE_LEN - sizeof(STR_PackHead))/len)
             {
                 t_packHead.Flag = FLAG_ViewRoleCome;
                 t_packHead.Len = len * pushCount;
@@ -1381,7 +1389,7 @@ void PlayerLogin::SendViewRole(TCPConnection::Pointer conn)
             }
         }
     }
-    if(pushCount != (CHUNK_SIZE - sizeof(STR_PackHead))/len && pushCount != 0)
+    if(pushCount != 0)
     {
         t_packHead.Flag = FLAG_ViewRoleCome;
         t_packHead.Len = len * pushCount;
@@ -1442,7 +1450,7 @@ void PlayerLogin::FriendOffline(TCPConnection::Pointer conn)
     STR_PackHead t_packHead;
     t_packHead.Flag = FLAG_FriendOffLine;
     t_packHead.Len = sizeof(roleid);
-    hf_char buff[1024] = { 0 };
+    hf_char buff[PACKAGE_LEN] = { 0 };
     memcpy(buff, &t_packHead, sizeof(STR_PackHead));
     memcpy(buff + sizeof(STR_PackHead), &roleid, sizeof(roleid));
     for(_umap_friendList::iterator it = friendList->begin(); it != friendList->end(); it++)

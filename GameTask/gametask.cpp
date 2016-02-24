@@ -86,7 +86,7 @@ void GameTask::AskTask(TCPConnection::Pointer conn, hf_uint32 taskid)
     umap_taskAim::iterator iter= m_taskAim->find(taskid);
     if(iter != m_taskAim->end())
     {
-        hf_char buff[1024] = { 0 };
+        hf_char buff[PACKAGE_LEN] = { 0 };
         t_taskProcess.TaskID = taskid;
         for(vector<STR_TaskAim>::iterator aim_it = iter->second.begin(); aim_it != iter->second.end(); aim_it++) //一个任务可能有多个任务目标
         {
@@ -256,8 +256,8 @@ bool GameTask::TaskFinishGoodsReward(TCPConnection::Pointer conn, STR_PackFinish
         return false;
     }
 
-    hf_char newGoodsBuff[1024] = { 0 };
-    hf_char equAttrBuff[1024] = { 0 };
+    hf_char newGoodsBuff[PACKAGE_LEN] = { 0 };
+    hf_char equAttrBuff[PACKAGE_LEN] = { 0 };
     hf_uint8 goodsCount = 0;
     hf_uint8 equCount = 0;
     umap_roleGoods  playerGoods = (*smap)[conn].m_playerGoods;
@@ -406,7 +406,7 @@ void GameTask::FinishCollectGoodsTask(TCPConnection::Pointer conn, STR_TaskProce
 {
     SessionMgr::SessionPointer smap = SessionMgr::Instance()->GetSession();
     OperationPostgres* t_post = Server::GetInstance()->GetOperationPostgres();
-    hf_char buff[1024] = { 0 };
+    hf_char buff[PACKAGE_LEN] = { 0 };
 
     hf_uint32 roleid = (*smap)[conn].m_roleid;
     STR_PackHead t_packHead;
@@ -569,7 +569,7 @@ void GameTask::StartTaskDlg(TCPConnection::Pointer conn, hf_uint32 taskid)
     umap_dialogue::iterator it = (*m_dialogue).find(taskid);
     if(it != (*m_dialogue).end())
     {
-        hf_char buff[1024] = { 0 };
+        hf_char buff[PACKAGE_LEN] = { 0 };
         STR_TaskDlg t_dlg= (*m_dialogue)[taskid];
         STR_PackHead t_packHead;
         t_packHead.Len =  t_dlg.StartLen + sizeof(t_dlg.TaskID);
@@ -588,7 +588,7 @@ void GameTask::FinishTaskDlg(TCPConnection::Pointer conn, hf_uint32 taskid)
     umap_dialogue::iterator it = (*m_dialogue).find(taskid);
     if(it != (*m_dialogue).end())
     {
-        hf_char buff[1024] = { 0 };
+        hf_char buff[PACKAGE_LEN] = { 0 };
         STR_TaskDlg t_dlg= (*m_dialogue)[taskid];
         STR_PackHead t_packHead;
         t_packHead.Len = t_dlg.FinishLen + sizeof(t_dlg.TaskID) ;
@@ -617,7 +617,7 @@ void GameTask::TaskAim(TCPConnection::Pointer conn, hf_uint32 taskid)
     umap_taskAim::iterator it = m_taskAim->find(taskid);
     if(it != m_taskAim->end())
     {
-        hf_char buff[1024] = { 0 };
+        hf_char buff[PACKAGE_LEN] = { 0 };
         hf_uint32 i = 0;
         for(vector<STR_TaskAim>::iterator iter = it->second.begin(); iter != it->second.end(); iter++)
         {
@@ -635,7 +635,7 @@ void GameTask::TaskAim(TCPConnection::Pointer conn, hf_uint32 taskid)
  //请求任务奖励
 void GameTask::TaskReward(TCPConnection::Pointer conn, hf_uint32 taskid)
 {
-    hf_char buff[1024] = { 0 };
+    hf_char buff[PACKAGE_LEN] = { 0 };
     STR_PackHead        t_packHead;
     t_packHead.Flag = FLAG_TaskReward;
     umap_taskReward::iterator it = (*m_taskReward).find(taskid);  //其他奖励
@@ -671,7 +671,7 @@ void GameTask::AskTaskExeDialog(TCPConnection::Pointer conn, STR_PackAskTaskExeD
     {
         if(exeDlg->AimID == iter->AimID)
         {
-            hf_char buff[1024] = { 0 };
+            hf_char buff[PACKAGE_LEN] = { 0 };
             STR_PackHead t_packHead;
             t_packHead.Len =  iter->ExeLen + sizeof(iter->TaskID) + sizeof(iter->AimID);
             t_packHead.Flag = FLAG_TaskExeDlg;
@@ -736,9 +736,9 @@ void GameTask::SendPlayerTaskProcess(TCPConnection::Pointer conn)
     if(playerAcceptTask->size() > 0)
     {
         umap_taskGoods taskGoods = (*smap)[conn].m_taskGoods;
-        hf_char buff[1024] = { 0 };
-        hf_char proBuff[1024] = { 0 };
-        hf_char descBuff[1024] = { 0 };
+        hf_char buff[PACKAGE_LEN] = { 0 };
+        hf_char proBuff[PACKAGE_LEN] = { 0 };
+        hf_char descBuff[PACKAGE_LEN] = { 0 };
         hf_uint32 i = 0;
         hf_uint32 j = 0;
         STR_PackHead t_packHead;
@@ -800,7 +800,7 @@ void GameTask::SendPlayerViewTask(TCPConnection::Pointer conn)
     umap_completeTask playerCompleteTask = (*smap)[conn].m_completeTask;
 
     hf_int32 size = 0;
-    hf_char buff[1024] = { 0 };
+    hf_char buff[PACKAGE_LEN] = { 0 };
     STR_PackHead t_packHead;
     //发送玩家所在地图上的任务
     for(_umap_taskProfile::iterator it = m_taskProfile->begin(); it != m_taskProfile->end(); it++)
@@ -831,7 +831,7 @@ void GameTask::SendPlayerViewTask(TCPConnection::Pointer conn)
 
         memcpy(buff + sizeof(STR_PackHead) + size*sizeof(STR_TaskProfile), &(*m_taskProfile)[it->first], sizeof(STR_TaskProfile));
         size++;
-        if(size == (CHUNK_SIZE - sizeof(STR_PackHead))/sizeof(STR_TaskProfile))
+        if(size == (PACKAGE_LEN - sizeof(STR_PackHead))/sizeof(STR_TaskProfile))
         {
             t_packHead.Flag = FLAG_TaskProfile;
             t_packHead.Len = sizeof(STR_TaskProfile) * size;
@@ -843,7 +843,7 @@ void GameTask::SendPlayerViewTask(TCPConnection::Pointer conn)
         }
     }
 
-    if(size != (CHUNK_SIZE - sizeof(STR_PackHead))/sizeof(STR_TaskProfile) && size != 0)
+    if(size != (PACKAGE_LEN - sizeof(STR_PackHead))/sizeof(STR_TaskProfile) && size != 0)
     {
         t_packHead.Flag = FLAG_TaskProfile;
         t_packHead.Len = sizeof(STR_TaskProfile) * size;
@@ -865,7 +865,7 @@ void GameTask::UpdateCollectGoodsTaskProcess(TCPConnection::Pointer conn, hf_uin
         return;
     }
     umap_taskProcess playerAcceptTask = ((*smap)[conn]).m_playerAcceptTask;
-    hf_char buff[1024] = { 0 };
+    hf_char buff[PACKAGE_LEN] = { 0 };
     STR_PackHead t_packHead;
     t_packHead.Flag = FLAG_TaskProcess;
     t_packHead.Len = 0;
@@ -923,7 +923,7 @@ void GameTask::UpdateAttackMonsterTaskProcess(TCPConnection::Pointer conn, hf_ui
 {
     SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
     umap_taskProcess playerAcceptTask = ((*smap)[conn]).m_playerAcceptTask;
-    hf_char buff[1024] = { 0 };
+    hf_char buff[PACKAGE_LEN] = { 0 };
     STR_PackHead t_packHead;
     t_packHead.Flag = FLAG_TaskProcess;
     t_packHead.Len = 0;
@@ -954,7 +954,7 @@ void GameTask::UpdateAttackUpgradeTaskProcess(TCPConnection::Pointer conn, hf_ui
 {
     SessionMgr::SessionPointer smap =  SessionMgr::Instance()->GetSession();
     umap_taskProcess playerAcceptTask = ((*smap)[conn]).m_playerAcceptTask;
-    hf_char buff[1024] = { 0 };
+    hf_char buff[PACKAGE_LEN] = { 0 };
     STR_PackHead t_packHead;
     t_packHead.Flag = FLAG_TaskProcess;
     t_packHead.Len = 0;

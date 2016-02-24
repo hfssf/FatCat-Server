@@ -1000,7 +1000,7 @@ void GameAttack::QuerySkillInfo()
 //发送玩家可以使用的技能
 void GameAttack::SendPlayerSkill(TCPConnection::Pointer conn)
 {
-    hf_char buff[1024] = { 0 };
+    hf_char buff[PACKAGE_LEN] = { 0 };
     STR_PlayerSkill t_skill;
     STR_PackHead t_packHead;
     t_packHead.Flag = FLAG_CanUsedSkill;
@@ -1013,7 +1013,7 @@ void GameAttack::SendPlayerSkill(TCPConnection::Pointer conn)
         t_skill.LeadTime = it->second.LeadTime;
         memcpy(buff + sizeof(STR_PackHead) + sizeof(STR_PlayerSkill)*i, &t_skill, sizeof(STR_PlayerSkill));
         i++;
-        if(i == (1024 - sizeof(STR_PackHead))/sizeof(STR_PlayerSkill) + 1)
+        if(i == (PACKAGE_LEN - sizeof(STR_PackHead))/sizeof(STR_PlayerSkill))
         {
             t_packHead.Len = sizeof(STR_PlayerSkill) * i;
             memcpy(buff, &t_packHead, sizeof(STR_PackHead));

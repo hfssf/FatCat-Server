@@ -135,7 +135,7 @@ int TCPConnection::Write_all(void *buff, int size)
         _pop_times = 0;
         return 0;
     }
-    if(size >= CHUNK_SIZE)  //test
+    if(size >= PACKAGE_LEN)  //test
     {
         STR_PackHead t_packHead;
         memcpy(&t_packHead, buff, sizeof(STR_PackHead));

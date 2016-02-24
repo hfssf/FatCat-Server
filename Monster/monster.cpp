@@ -141,8 +141,8 @@ void Monster::PushViewMonsters( TCPConnection::Pointer conn)
 
     STR_MonsterBasicInfo t_monsterBasicInfo;
 
-    hf_char comebuff[1024] = { 0 };
-    hf_char leavebuff[1024] = { 0 };
+    hf_char comebuff[PACKAGE_LEN] = { 0 };
+    hf_char leavebuff[PACKAGE_LEN] = { 0 };
     hf_uint16 pushcount = 0;
     hf_uint16 popcount = 0;
 
@@ -174,7 +174,7 @@ void Monster::PushViewMonsters( TCPConnection::Pointer conn)
             memcpy(comebuff + sizeof(STR_PackHead) + sizeof(STR_MonsterBasicInfo)*pushcount, &t_monsterBasicInfo, sizeof(STR_MonsterBasicInfo));
             pushcount++;
 
-            if(pushcount == (1024 - sizeof(STR_PackHead))/sizeof(STR_MonsterBasicInfo) + 1)
+            if(pushcount == (PACKAGE_LEN - sizeof(STR_PackHead))/sizeof(STR_MonsterBasicInfo))
             {
                 t_packHead.Flag = FLAG_MonsterCome;
                 t_packHead.Len = sizeof(STR_MonsterBasicInfo) * pushcount;

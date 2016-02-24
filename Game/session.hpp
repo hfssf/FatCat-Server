@@ -452,7 +452,7 @@ public:
 
     void SendNotPickGoods(TCPConnection::Pointer conn)
     {
-        hf_char buff[1024] = { 0 };
+        hf_char buff[PACKAGE_LEN] = { 0 };
         hf_uint8 i = 0;
         STR_PackHead head;
         head.Flag = FLAG_LootGoods;
@@ -460,7 +460,7 @@ public:
         {
             memcpy(buff + sizeof(STR_PackHead) + i*sizeof(STR_LootGoods), &it->second, sizeof(STR_LootGoods));
             i++;
-            if(i == (1024 - sizeof(STR_PackHead))/sizeof(STR_LootGoods) + 1)
+            if(i == (PACKAGE_LEN - sizeof(STR_PackHead))/sizeof(STR_LootGoods))
             {
                 head.Len = i*sizeof(STR_LootGoods);
                 memcpy(buff, &head, sizeof(STR_PackHead));

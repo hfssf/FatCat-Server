@@ -222,7 +222,7 @@ void TeamFriend::ReciveAddFriend(TCPConnection::Pointer conn, STR_PackAddFriendR
      hf_int32 t_row = srv->getDiskDB()->GetAskAddFriend(addFriend, sbd.str());
      if(t_row > 0)
      {
-         hf_char buff[1024] = { 0 };
+         hf_char buff[PACKAGE_LEN] = { 0 };
          STR_PackHead t_packHead;
          t_packHead.Flag = FLAG_AddFriend;
          t_packHead.Len = t_row*sizeof(STR_AddFriend);
@@ -231,7 +231,7 @@ void TeamFriend::ReciveAddFriend(TCPConnection::Pointer conn, STR_PackAddFriendR
          {
              memcpy(buff + sizeof(STR_PackHead) + i*sizeof(STR_AddFriend),&(*it), sizeof(STR_AddFriend));
              i++;
-             if(i == (1024 - sizeof(STR_PackHead))/sizeof(STR_AddFriend) + 1)
+             if(i == (PACKAGE_LEN - sizeof(STR_PackHead))/sizeof(STR_AddFriend))
              {
                  t_packHead.Len = sizeof(STR_AddFriend) * i;
                  memcpy(buff, &t_packHead, sizeof(STR_PackHead));
