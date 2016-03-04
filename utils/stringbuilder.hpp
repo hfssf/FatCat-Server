@@ -4,6 +4,7 @@
 
 #include <string.h>
 #include <cstdlib>
+#include <cstdio>
 
 #define   BF_SZ     4096
 

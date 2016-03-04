@@ -3,8 +3,6 @@
 
 #include <boost/asio.hpp>
 
-
-//#include "transfer.hpp"
 #include "postgresqlstruct.h"
 #include "./../server.h"
 #include "session.hpp"
